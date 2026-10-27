@@ -54,8 +54,9 @@ def inventory_context(request, limit=5):
     for s in items:
         if not s.ai_explanation:
             # 页面侧只用规则即时补齐（不调 LLM，不阻塞页面）；LLM 版在测算时生成
-            _explain.ensure_explanation(s, allow_llm=False)
+            _explain.ensure_explanation(s, allow_llm=False, persist=False)
         rows.append({'pk': s.pk, 'product': prods.get(s.product_id), 'target_label': s.target_label, 'title': s.title,
                      'suggested_qty': int(s.quantity) if s.quantity is not None else None, 'basis': s.rationale,
+                     'short': _explain.short_line(s),
                      'explain': s.ai_explanation, 'anomalies': s.ai_anomalies or [], 'ai_source': s.ai_source})
     return {'replenish_suggestions': rows}

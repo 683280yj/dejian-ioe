@@ -108,7 +108,20 @@ def rule_explain(s) -> str:
         parts.append(seg)
     elif qty == 0:
         parts.append('这次不建议补货')
-    return f'{name}：' + '；'.join(parts) + '。' if parts else ''
+    return '；'.join(parts) + '。' if parts else ''
+
+
+def short_line(s) -> str:
+    """客服口吻的一行：先说情况，再给建议；细节收进「为什么」里。"""
+    qty = float(s.quantity or 0)
+    if qty <= 0:
+        return '这款暂时不用补，库存够卖。'
+    case = _f(s.inputs or {}, '箱规') or 0
+    tail = f'建议补 {qty:.0f} 瓶' + (f'（约 {qty / case:.0f} 箱）' if case else '')
+    anomalies = s.ai_anomalies or detect_anomalies(s)
+    if anomalies:
+        return f'{anomalies[0]["text"]}，{tail}。'
+    return f'库存已经低于再订货点，{tail}。'
 
 
 _LLM_SYSTEM = (
@@ -158,8 +171,8 @@ def llm_explain(s, anomalies) -> str | None:
         return None
 
 
-def ensure_explanation(s, allow_llm=True) -> bool:
-    """为一条建议生成并落库解释；已有则跳过。返回是否新生成。"""
+def ensure_explanation(s, allow_llm=True, persist=True) -> bool:
+    """为一条建议生成解释；已有则跳过。persist=False 时只挂在内存对象上不写库（页面 GET 侧用）。返回是否新生成。"""
     if s.ai_explanation or not enabled():
         return False
     anomalies = detect_anomalies(s)
@@ -174,7 +187,8 @@ def ensure_explanation(s, allow_llm=True) -> bool:
     s.ai_anomalies = anomalies
     s.ai_source = source
     s.ai_generated_at = timezone.now()
-    s.save(update_fields=['ai_explanation', 'ai_anomalies', 'ai_source', 'ai_generated_at'])
+    if persist:
+        s.save(update_fields=['ai_explanation', 'ai_anomalies', 'ai_source', 'ai_generated_at'])
     return True
 
 

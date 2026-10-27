@@ -58,7 +58,7 @@ class DemoFlowTests(TestCase):
         rows = r.context['replenish_suggestions']
         self.assertTrue(0 < len(rows) <= 5)
         row = rows[0]
-        self.assertEqual(set(row), {'pk', 'product', 'target_label', 'title', 'suggested_qty', 'basis', 'explain', 'anomalies', 'ai_source'})
+        self.assertEqual(set(row), {'pk', 'product', 'target_label', 'title', 'suggested_qty', 'basis', 'short', 'explain', 'anomalies', 'ai_source'})
         self.assertGreater(row['suggested_qty'], 0)
         self.assertEqual(row['product'].tenant_id, self.dj.pk)
         self.assertEqual(reverse('ai_assist:suggestion_adopt', args=[row['pk']]), f"/ai/suggestions/{row['pk']}/adopt/")

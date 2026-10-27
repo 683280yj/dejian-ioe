@@ -3,13 +3,15 @@ from django.apps import apps
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import NoReverseMatch, reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
+from . import assistant as _assistant
 from . import services
+from .hints import restock_suggestions
 from .models import Suggestion
 from .workflows import WORKFLOWS
 
@@ -73,3 +75,26 @@ def refresh(request):
         services.run_workflow(tenant, key, {}, user=request.user)
     messages.success(request, '补货建议和库存提示已更新')
     return _back(request)
+
+
+@login_required
+def assistant_chat(request):
+    """筹策助手对话入口（GET，兼容体验库只读访客）。
+
+    问答不写数据；生成草稿时只返回 adopt 动作，由前端走既有采纳入口
+    （POST + CSRF + 权限/只读中间件）真正执行，助手本身不写库。
+    """
+    tenant = getattr(request, 'tenant', None)
+    if tenant is None:
+        return JsonResponse({'reply': '还没选企业，先选好企业我再帮你看。'}, status=400)
+    _run, items = restock_suggestions(tenant, limit=10)
+    from . import explain as _explain
+    for s in items:
+        if not s.ai_explanation:
+            _explain.ensure_explanation(s, allow_llm=False, persist=False)
+    if request.GET.get('init'):
+        return JsonResponse({'reply': _assistant.briefing(items)})
+    text, state, action = _assistant.reply(items, request.GET.get('message', ''),
+                                           request.session.get('assistant_state'))
+    request.session['assistant_state'] = state
+    return JsonResponse({'reply': text, 'action': action})
