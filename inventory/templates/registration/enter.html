@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>进入系统</title>
+</head>
+<body>
+  <p>正在进入系统…</p>
+  <form id="enter-form" method="post" action="{{ enter_url }}">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <noscript><button type="submit">进入系统</button></noscript>
+  </form>
+  <script>document.getElementById('enter-form').submit();</script>
+</body>
+</html>

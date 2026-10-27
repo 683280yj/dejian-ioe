@@ -1,0 +1,22 @@
+{% extends "inventory/base.html" %}
+{% block title %}企业客户/经销商{% endblock %}
+{% block content %}
+<div class="b2b-page">
+  <div class="page-heading"><h1 class="page-title">企业客户/经销商</h1>
+    <div class="heading-actions"><a class="button button--primary" href="{% url 'b2b:customer_create' %}">新建</a></div>
+  </div>
+  {% include "b2b/_nav.html" %}
+  <section class="card">
+    <div class="panel-heading"><h2>客户列表</h2></div>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead><tr><th>编码</th><th>名称</th><th>类型</th><th>区域</th><th>信用额度</th><th>未收</th><th></th></tr></thead>
+        <tbody>
+        {% for c in customers %}<tr><td>{{ c.code }}</td><td>{{ c.name }}</td><td>{{ c.get_kind_display }}</td><td>{{ c.region }}</td><td>{{ c.credit_limit }}</td><td>{{ c.outstanding }}</td><td><a href="{% url 'b2b:customer_edit' c.pk %}">编辑</a></td></tr>
+        {% empty %}<tr><td colspan="7" class="text-muted">暂无客户</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

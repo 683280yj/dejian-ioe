@@ -1,0 +1,16 @@
+{% extends 'inventory/base.html' %}
+{% block title %}会员消费记录 - {{ block.super }}{% endblock %}
+{% block content %}
+<div class="page-heading"><h1 class="page-title visually-hidden mb-0">会员消费记录</h1><a class="button button--secondary" href="{% url 'member_list' %}">会员列表</a></div>
+<section class="card"><div class="card-body">
+<form method="get" class="row g-2 align-items-end mb-3">
+    <div class="col-md-5"><label class="form-label" for="purchase-search">会员姓名或手机号</label><input class="form-control" id="purchase-search" name="search" value="{{ search_query }}"></div>
+    <div class="col-md-3"><label class="form-label" for="purchase-start">开始日期</label><input class="form-control" id="purchase-start" type="date" name="start_date" value="{{ start_date|default:'' }}"></div>
+    <div class="col-md-3"><label class="form-label" for="purchase-end">结束日期</label><input class="form-control" id="purchase-end" type="date" name="end_date" value="{{ end_date|default:'' }}"></div>
+    <div class="col-md-1"><button class="button button--primary" type="submit">查询</button></div>
+</form>
+<div class="table-responsive"><table class="table"><thead><tr><th>会员</th><th>手机号</th><th>消费次数</th><th>累计消费</th><th>平均消费</th><th>最近消费</th><th>操作</th></tr></thead><tbody>
+{% for stats in member_stats %}<tr><td>{{ stats.member__name }}</td><td>{{ stats.member__phone }}</td><td>{{ stats.total_sales }}</td><td>¥{{ stats.purchase_total|floatformat:2 }}</td><td>¥{{ stats.avg_amount|floatformat:2 }}</td><td>{{ stats.last_purchase|date:'Y-m-d H:i' }}</td><td><a class="button button--secondary button--sm" href="{% url 'member_purchases' %}?member_id={{ stats.member__id }}&amp;start_date={{ start_date|default:''|urlencode }}&amp;end_date={{ end_date|default:''|urlencode }}">消费明细</a></td></tr>{% empty %}<tr><td colspan="7" class="text-muted text-center">暂无符合条件的消费记录</td></tr>{% endfor %}
+</tbody></table></div>
+</div></section>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% with p=request.path %}
+<nav class="b2b-nav mb-3 d-flex flex-wrap gap-2" aria-label="To B">
+  <a class="b2b-nav-pill{% if p == '/b2b/' or p == '/b2b' %} is-active{% endif %}" href="{% url 'b2b:dashboard' %}">To B 概览</a>
+  <a class="b2b-nav-pill{% if '/b2b/customers' in p %} is-active{% endif %}" href="{% url 'b2b:customer_list' %}">企业客户/经销商</a>
+  <a class="b2b-nav-pill{% if '/b2b/purchase-orders' in p %} is-active{% endif %}" href="{% url 'b2b:po_list' %}">采购单</a>
+  <a class="b2b-nav-pill{% if '/b2b/wholesale-orders' in p %} is-active{% endif %}" href="{% url 'b2b:so_list' %}">批发订单</a>
+  <a class="b2b-nav-pill{% if '/b2b/statements' in p %} is-active{% endif %}" href="{% url 'b2b:statement_list' %}">供应商对账</a>
+  <a class="b2b-nav-pill{% if '/b2b/payables' in p %} is-active{% endif %}" href="{% url 'b2b:payable_list' %}">应付</a>
+  <a class="b2b-nav-pill{% if '/b2b/receivables' in p %} is-active{% endif %}" href="{% url 'b2b:receivable_list' %}">应收</a>
+</nav>
+{% endwith %}
+{% if messages %}{% for m in messages %}<div class="alert alert-{% if m.tags == 'error' %}danger{% else %}{{ m.tags }}{% endif %}">{{ m }}</div>{% endfor %}{% endif %}

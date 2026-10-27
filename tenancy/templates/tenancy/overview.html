@@ -1,0 +1,43 @@
+{% extends "inventory/base.html" %}
+{% block title %}企业 · {{ tenant|default:"未加入企业" }}{% endblock %}
+{% block content %}
+<div class="container-fluid py-3 tenancy-overview">
+  {% if not tenant %}
+    <p>当前账号未加入任何企业（平台管理员视角，看到全部数据）。</p>
+  {% else %}
+  <h2>{{ tenant.name }}</h2>
+  <p class="text-muted">{{ tenant.industry }} · {{ tenant.region }} · 我的角色：{{ current_role_label }}</p>
+  <p>{{ tenant.description }}</p>
+
+  <h4>品牌</h4>
+  <table class="table table-sm"><tr><th>编码</th><th>品牌</th><th>类型</th><th>定位</th><th>SKU 数</th></tr>
+  {% for b in brands %}<tr><td>{{ b.brand.code }}</td><td>{{ b.brand.name }}</td><td>{% if b.brand.is_own %}自有{% else %}代理{% endif %}</td><td>{{ b.brand.positioning }}</td><td>{{ b.sku_count }}</td></tr>{% endfor %}
+  </table>
+
+  <h4>仓库</h4>
+  <table class="table table-sm"><tr><th>编码</th><th>仓库</th><th>地址</th><th>库容</th><th>在库</th><th>利用率</th></tr>
+  {% for w in warehouses %}<tr><td>{{ w.warehouse.code }}</td><td>{{ w.warehouse.name }}{% if w.warehouse.is_default %}（默认）{% endif %}</td><td>{{ w.warehouse.address }}</td><td>{{ w.warehouse.capacity_units|default:"不限" }}</td><td>{{ w.used }}</td><td>{% if w.utilization is not None %}{{ w.utilization }}%{% else %}—{% endif %}</td></tr>{% endfor %}
+  </table>
+
+  <h4>销售渠道</h4>
+  <table class="table table-sm"><tr><th>编码</th><th>渠道</th><th>类型</th><th>最低成交价比例</th></tr>
+  {% for c in channels %}<tr><td>{{ c.code }}</td><td>{{ c.name }}</td><td>{{ c.get_kind_display }}</td><td>{{ c.min_price_ratio }}</td></tr>{% endfor %}
+  </table>
+
+  <h4>成员与角色</h4>
+  <table class="table table-sm"><tr><th>账号</th><th>姓名</th><th>角色</th><th>职务</th><th>负责品牌</th></tr>
+  {% for m in members %}<tr><td>{{ m.user.username }}</td><td>{{ m.user.get_full_name }}</td><td>{{ m.get_role_display }}</td><td>{{ m.title }}</td><td>{% for b in m.brands.all %}{{ b.name }} {% empty %}全部{% endfor %}</td></tr>{% endfor %}
+  </table>
+  {% endif %}
+
+  {% if user_memberships|length > 1 or tenant_brands %}
+  <form method="post" action="{% url 'tenancy:switch' %}" class="row g-2">{% csrf_token %}
+    {% if user_memberships|length > 1 %}
+    <div class="col-auto"><select name="tenant_id" class="form-select">{% for m in user_memberships %}<option value="{{ m.tenant_id }}" {% if m.tenant_id == tenant.id %}selected{% endif %}>{{ m.tenant }}</option>{% endfor %}</select></div>
+    {% endif %}
+    <div class="col-auto"><select name="brand_id" class="form-select"><option value="">全部品牌</option>{% for b in tenant_brands %}<option value="{{ b.id }}" {% if current_brand and current_brand.id == b.id %}selected{% endif %}>{{ b.name }}</option>{% endfor %}</select></div>
+    <div class="col-auto"><button class="btn btn-outline-secondary">切换</button></div>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

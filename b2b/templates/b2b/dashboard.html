@@ -1,0 +1,16 @@
+{% extends "inventory/base.html" %}
+{% block title %}To B 交易{% endblock %}
+{% block content %}
+<div class="b2b-page">
+  <div class="page-heading"><h1 class="page-title">To B 交易</h1></div>
+  {% include "b2b/_nav.html" %}
+  <div class="b2b-stats">
+    <section class="card b2b-stat"><div class="stat-top"><span>待审批/待入库采购单</span><i class="bi bi-box-arrow-in-down" aria-hidden="true"></i></div><strong class="stat-value">{{ po_pending }}</strong></section>
+    <section class="card b2b-stat"><div class="stat-top"><span>待审批/待发货批发订单</span><i class="bi bi-truck" aria-hidden="true"></i></div><strong class="stat-value">{{ so_pending }}</strong></section>
+    <section class="card b2b-stat"><div class="stat-top"><span>未结应付</span><i class="bi bi-wallet2" aria-hidden="true"></i></div><strong class="stat-value">{{ payable_open.a|default:0|floatformat:"2g" }}</strong><div class="stat-meta">已付 {{ payable_open.p|default:0|floatformat:"2g" }}</div></section>
+    <section class="card b2b-stat"><div class="stat-top"><span>未结应收</span><i class="bi bi-cash-coin" aria-hidden="true"></i></div><strong class="stat-value">{{ receivable_open.a|default:0|floatformat:"2g" }}</strong><div class="stat-meta">已收 {{ receivable_open.p|default:0|floatformat:"2g" }}</div></section>
+    <section class="card b2b-stat"><div class="stat-top"><span>待供应商对账</span><i class="bi bi-journal-check" aria-hidden="true"></i></div><strong class="stat-value">{{ statements_draft }}</strong></section>
+  </div>
+  <p class="text-muted mt-3 small">审批、入库、发货、收付款、供应商对账确认均需人工在本模块点击完成。</p>
+</div>
+{% endblock %}

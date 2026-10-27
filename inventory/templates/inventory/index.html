@@ -1,0 +1,54 @@
+{% extends 'inventory/base.html' %}
+{% load static custom_filters %}
+{% block title %}{% if request.LANGUAGE_CODE == 'en' %}Overview{% else %}经营概览{% endif %} - {{ block.super }}{% endblock %}
+{% block content %}
+<div class="page-heading">
+    <h1 class="page-title visually-hidden mb-0">{% if request.LANGUAGE_CODE == 'en' %}Overview{% else %}经营概览{% endif %}</h1>
+    <div class="heading-actions">
+        <span class="date-label">{% now 'Y-m-d' %}</span>
+        <a class="button button--secondary" href="{% url 'product_create' %}"><i class="bi bi-box-seam" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}Add product{% else %}新增商品{% endif %}</a>
+        <a class="button button--secondary" href="{% url 'inventory_in' %}"><i class="bi bi-box-arrow-in-down" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}Stock in{% else %}入库{% endif %}</a>
+        <a class="button button--primary" href="{% url 'sale_create' %}"><i class="bi bi-plus-lg" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}New sale{% else %}开始收银{% endif %}</a>
+    </div>
+</div>
+{% if stock_alert or out_of_stock_products or low_stock_products %}
+<div class="alert alert-warning d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2" role="alert">
+    <div><i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i><strong>{% if request.LANGUAGE_CODE == 'en' %}Stock anomaly{% else %}库存异常{% endif %}</strong>
+        <span class="badge text-bg-light border ms-1">{% if request.LANGUAGE_CODE == 'en' %}AI alert{% else %}AI 提示{% endif %}</span>
+        <span class="ms-1">{% if stock_alert %}{% firstof stock_alert.detail stock_alert.title %}{% elif request.LANGUAGE_CODE == 'en' %}{{ out_of_stock_products|default:0 }} out of stock, {{ low_stock_products|default:0 }} at or below the alert level. Review replenishment before the next order cycle.{% else %}{{ out_of_stock_products|default:0 }} 种商品已售罄，{{ low_stock_products|default:0 }} 种低于预警线，建议在下个订货周期前确认补货。{% endif %}</span>
+    </div>
+    <a class="btn btn-sm btn-outline-primary text-nowrap" href="{% url 'inventory_list' %}#replenish">{% if request.LANGUAGE_CODE == 'en' %}View suggestions{% else %}查看补货建议{% endif %}</a>
+</div>
+{% endif %}
+<div class="stats-grid">
+    <a class="card stat-card" href="{% url 'sale_list' %}"><div class="stat-top"><span>{% if request.LANGUAGE_CODE == 'en' %}Today Sales{% else %}今日销售额{% endif %}</span><i class="bi bi-currency-yen" aria-hidden="true"></i></div><strong class="stat-value"><small>¥</small>{{ today_sales_amount|floatformat:2 }}</strong><div class="stat-meta">{% if request.LANGUAGE_CODE == 'en' %}Orders today{% else %}今日订单{% endif %}<strong>{{ today_sales }}</strong>{% if request.LANGUAGE_CODE == 'en' %}orders{% else %}笔{% endif %}</div></a>
+    <a class="card stat-card" href="{% url 'product_list' %}"><div class="stat-top"><span>{% if request.LANGUAGE_CODE == 'en' %}Products{% else %}商品总数{% endif %}</span><i class="bi bi-box-seam" aria-hidden="true"></i></div><strong class="stat-value">{{ total_products }}</strong><div class="stat-meta"><strong>{{ low_stock_products }}</strong>{% if request.LANGUAGE_CODE == 'en' %}low in stock{% else %}种库存偏低{% endif %}</div></a>
+    <a class="card stat-card" href="{% url 'member_list' %}"><div class="stat-top"><span>{% if request.LANGUAGE_CODE == 'en' %}Members{% else %}会员总数{% endif %}</span><i class="bi bi-people" aria-hidden="true"></i></div><strong class="stat-value">{{ total_members }}</strong><div class="stat-meta">{% if request.LANGUAGE_CODE == 'en' %}New this month{% else %}本月新增{% endif %}<strong>{{ new_members_month }}</strong></div></a>
+    <a class="card stat-card" href="{% url 'sale_list' %}"><div class="stat-top"><span>{% if request.LANGUAGE_CODE == 'en' %}Total orders{% else %}累计订单{% endif %}</span><i class="bi bi-receipt" aria-hidden="true"></i></div><strong class="stat-value">{{ total_sales }}</strong><div class="stat-meta">{% if request.LANGUAGE_CODE == 'en' %}Yesterday{% else %}昨日订单{% endif %}<strong>{{ yesterday_sales }}</strong>{% if request.LANGUAGE_CODE == 'en' %}orders{% else %}笔{% endif %}</div></a>
+</div>
+<div class="dashboard-main">
+    <section class="card chart-panel">
+        <div class="panel-heading"><h2>{% if request.LANGUAGE_CODE == 'en' %}Sales Trend{% else %}销售趋势{% endif %}<span class="panel-period">{% if request.LANGUAGE_CODE == 'en' %}Last 7 days{% else %}近 7 天{% endif %}</span></h2><a class="subtle-link" href="{% url 'sales_trend_report' %}">{% if request.LANGUAGE_CODE == 'en' %}Details{% else %}详情{% endif %}<i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></div>
+        <div class="chart-container"><canvas id="salesChart" role="img" aria-label="{% if request.LANGUAGE_CODE == 'en' %}Sales over the last seven days{% else %}最近七天销售额趋势图{% endif %}">{% for day in sales_trend %}{{ day.date }}: ¥{{ day.amount }}; {% endfor %}</canvas></div>
+    </section>
+    <section class="card inventory-panel">
+        <div class="panel-heading"><h2>{% if request.LANGUAGE_CODE == 'en' %}Inventory{% else %}库存状态{% endif %}</h2><i class="bi bi-archive text-muted" aria-hidden="true"></i></div>
+        <div class="inventory-counts"><div>{% if request.LANGUAGE_CODE == 'en' %}Low stock{% else %}库存偏低{% endif %}<strong>{{ low_stock_products }}</strong></div><div>{% if request.LANGUAGE_CODE == 'en' %}Out of stock{% else %}已售罄{% endif %}<strong>{{ out_of_stock_products }}</strong></div></div>
+        {% if low_stock_products %}<div class="alert alert-warning">{% if request.LANGUAGE_CODE == 'en' %}{{ low_stock_products }} products need replenishment.{% else %}{{ low_stock_products }} 种商品需要补货。{% endif %}</div>{% else %}<div class="alert alert-success">{% if request.LANGUAGE_CODE == 'en' %}All products have sufficient stock.{% else %}所有商品库存充足。{% endif %}</div>{% endif %}
+        <a class="button button--secondary" href="{% url 'inventory_list' %}">{% if request.LANGUAGE_CODE == 'en' %}Manage inventory{% else %}查看库存{% endif %}<i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+    </section>
+</div>
+<div class="dashboard-bottom">
+    <section class="card"><div class="panel-heading"><h2>{% if request.LANGUAGE_CODE == 'en' %}Bestsellers{% else %}热销商品{% endif %}</h2><a class="subtle-link" href="{% url 'top_products_report' %}">{% if request.LANGUAGE_CODE == 'en' %}View all{% else %}全部{% endif %}<i class="bi bi-chevron-right" aria-hidden="true"></i></a></div>
+        {% for product in top_products %}<div class="rank-row"><span class="rank-number">{{ forloop.counter }}</span><div class="rank-info"><strong>{{ product.product__name }}</strong><small>¥{{ product.total_amount|floatformat:2 }}</small></div><span class="rank-quantity">{{ product.total_qty }} <small>{% if request.LANGUAGE_CODE == 'en' %}sold{% else %}件{% endif %}</small></span></div>{% empty %}<div class="empty-state"><i class="bi bi-bar-chart" aria-hidden="true"></i><p>{% if request.LANGUAGE_CODE == 'en' %}No sales data yet{% else %}暂无销售数据{% endif %}</p></div>{% endfor %}
+    </section>
+    <section class="card"><div class="panel-heading"><h2>{% if request.LANGUAGE_CODE == 'en' %}Birthdays this month{% else %}本月生日会员{% endif %}</h2><a class="subtle-link" href="{% url 'birthday_members_report' %}">{% if request.LANGUAGE_CODE == 'en' %}View all{% else %}全部{% endif %}<i class="bi bi-chevron-right" aria-hidden="true"></i></a></div>
+        {% for member in birthday_members|slice:':5' %}<a class="rank-row" href="{% url 'member_detail' member.pk %}"><span class="user-avatar">{{ member.name|first }}</span><div class="rank-info"><strong>{{ member.name }}</strong><small>{{ member.level.name }}</small></div><span class="badge bg-secondary">{{ member.birthday|date:'m-d' }}</span></a>{% empty %}<div class="empty-state"><i class="bi bi-gift" aria-hidden="true"></i><p>{% if request.LANGUAGE_CODE == 'en' %}No birthdays this month{% else %}本月暂无生日会员{% endif %}</p></div>{% endfor %}
+    </section>
+    <section class="card"><div class="panel-heading"><h2>{% if request.LANGUAGE_CODE == 'en' %}Recent activity{% else %}最近操作{% endif %}</h2><a class="subtle-link" href="{% url 'operation_log_report' %}">{% if request.LANGUAGE_CODE == 'en' %}View all{% else %}全部{% endif %}<i class="bi bi-chevron-right" aria-hidden="true"></i></a></div>
+        {% for log in recent_logs|slice:':5' %}<div class="activity-row"><div class="rank-info"><p>{{ log.details|activity_summary:request.LANGUAGE_CODE }}</p><small>{{ log.operator.username }}</small></div><time datetime="{{ log.timestamp|date:'c' }}">{{ log.timestamp|date:'m-d H:i' }}</time></div>{% empty %}<div class="empty-state"><i class="bi bi-clock-history" aria-hidden="true"></i><p>{% if request.LANGUAGE_CODE == 'en' %}No recent activity{% else %}暂无操作记录{% endif %}</p></div>{% endfor %}
+    </section>
+</div>
+{{ sales_trend|json_script:'sales-trend-data' }}
+{% endblock %}
+{% block extra_js %}<script src="{% static 'inventory/vendor/chart.umd.js' %}"></script><script src="{% static 'inventory/dashboard.js' %}"></script>{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "inventory/base.html" %}
+{% block title %}企业外观 - {{ block.super }}{% endblock %}
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="row g-3">
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-header"><h5 class="mb-0">企业外观</h5></div>
+        <div class="card-body">
+          <p class="text-muted small">只影响当前企业：侧栏、顶栏与登录页的文字字标和主色。平台不使用图形 logo。</p>
+          <form method="post" novalidate>
+            {% csrf_token %}
+            {% for field in form %}
+            <div class="mb-3">
+              <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+              {% for e in field.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+            </div>
+            {% endfor %}
+            <button class="btn btn-primary" type="submit">保存</button>
+            <a class="btn btn-outline-secondary" href="{% url 'tenancy:overview' %}">返回企业概览</a>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="card">
+        <div class="card-header"><h5 class="mb-0">预览</h5></div>
+        <div class="card-body">
+          <span class="dejian-wordmark" style="color: {{ tenant.primary_color }}">{{ tenant.wordmark }}</span>
+          <p class="text-muted small mt-2 mb-1">登录页预览链接：</p>
+          <code>{{ request.scheme }}://{{ request.get_host }}{% url 'login' %}?t={{ tenant.code }}</code>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

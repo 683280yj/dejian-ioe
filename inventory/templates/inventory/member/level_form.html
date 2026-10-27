@@ -1,0 +1,29 @@
+{% extends 'inventory/base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}{{ title }} - {{ block.super }}{% endblock %}
+{% block content %}
+<div class="page-heading"><h1 class="page-title visually-hidden mb-0">{{ title }}</h1><a class="button button--secondary" href="{% url 'member_level_list' %}">返回列表</a></div>
+<section class="card"><div class="card-body"><form method="post">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="form-grid">
+        {% for field in form %}<div class="form-field">{{ field|as_crispy_field }}
+            {% if field.name == 'discount' %}<div class="form-text">0.8 表示八折，1 表示不打折。</div>{% endif %}
+            {% if field.name == 'color' %}<div id="color-preview" class="form-text">等级标识预览</div>{% endif %}
+        </div>{% endfor %}
+    </div>
+    <div class="form-actions"><a class="button button--secondary" href="{% url 'member_level_list' %}">取消</a><button class="button button--primary" type="submit">{{ submit_text|default:'保存' }}</button></div>
+</form></div></section>
+{% endblock %}
+{% block extra_js %}<script>
+(() => {
+    const color = document.getElementById('id_color');
+    const preview = document.getElementById('color-preview');
+    const update = () => {
+        const allowed = ['primary', 'secondary', 'success', 'danger', 'warning', 'info', 'light', 'dark'];
+        preview.className = 'form-text' + (allowed.includes(color.value) ? ' text-' + color.value : '');
+    };
+    color.addEventListener('change', update);
+    update();
+})();
+</script>{% endblock %}

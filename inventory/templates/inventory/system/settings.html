@@ -1,0 +1,11 @@
+{% extends 'inventory/base.html' %}
+{% block title %}{% if request.LANGUAGE_CODE == 'en' %}Settings{% else %}系统设置{% endif %} - {{ block.super }}{% endblock %}
+{% block content %}
+<div class="page-heading"><div><h1 class="page-title visually-hidden">{% if request.LANGUAGE_CODE == 'en' %}Settings{% else %}系统设置{% endif %}</h1><p>{% if request.LANGUAGE_CODE == 'en' %}Manage your team, backups and system activity.{% else %}管理团队与数据，让门店有序运转。{% endif %}</p></div></div>
+<div class="report-grid mb-4">
+{% include 'inventory/includes/report_card.html' with route='user_list' icon='bi-people' title_zh='用户管理' title_en='Team members' description_zh='管理系统用户、角色与访问权限。' description_en='Manage users, roles and access permissions.' action_zh='管理用户' action_en='Manage users' %}
+{% include 'inventory/includes/report_card.html' with route='backup_list' icon='bi-database-check' tone='tone-green' title_zh='数据备份' title_en='Data backups' description_zh='创建、下载与管理门店的数据备份。' description_en='Create, download and manage store backups.' action_zh='管理备份' action_en='Manage backups' %}
+{% include 'inventory/includes/report_card.html' with route='log_list' icon='bi-clock-history' tone='tone-amber' title_zh='系统日志' title_en='System logs' description_zh='查看系统运行日志，追踪日常操作。' description_en='View application logs and track daily operations.' action_zh='查看日志' action_en='View logs' %}
+</div>
+<section class="card"><div class="card-header">{% if request.LANGUAGE_CODE == 'en' %}System information{% else %}系统信息{% endif %}</div><div class="card-body"><dl class="row mb-0"><dt class="col-sm-3">{% if request.LANGUAGE_CODE == 'en' %}Version{% else %}系统版本{% endif %}</dt><dd class="col-sm-9">{{ settings.version }}</dd><dt class="col-sm-3">{% if request.LANGUAGE_CODE == 'en' %}Timezone{% else %}系统时区{% endif %}</dt><dd class="col-sm-9">{{ settings.timezone }}</dd><dt class="col-sm-3">{% if request.LANGUAGE_CODE == 'en' %}Database{% else %}数据库引擎{% endif %}</dt><dd class="col-sm-9 text-break">{{ settings.database_engine }}</dd></dl></div></section>
+{% endblock %}

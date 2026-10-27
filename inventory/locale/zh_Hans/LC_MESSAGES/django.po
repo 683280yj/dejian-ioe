@@ -1,0 +1,8 @@
+# 补 Django 6.1 新增、尚无官方中文的空选项文案。
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: zh_Hans\n"
+
+msgid "- Select an option -"
+msgstr "请选择"

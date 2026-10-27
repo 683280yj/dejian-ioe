@@ -1,0 +1,277 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}{% if request.LANGUAGE_CODE == 'en' %}Inventory{% else %}库存管理{% endif %} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card page-header-card">
+            <div class="card-body">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                    <div>
+                        <h2 class="page-title visually-hidden card-title mb-0">{% if request.LANGUAGE_CODE == 'en' %}Inventory{% else %}库存管理{% endif %}</h2>
+                        <p class="text-muted mb-md-0">{% if request.LANGUAGE_CODE == 'en' %}Manage product stock levels and alerts{% else %}管理所有商品库存信息{% endif %}</p>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'inventory_transaction_list' %}" class="btn btn-outline-secondary"><i class="bi bi-clock-history me-1" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}History{% else %}库存流水{% endif %}</a>
+                        <a href="{% url 'inventory_adjust' %}" class="btn btn-outline-secondary"><i class="bi bi-sliders2 me-1" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}Adjust{% else %}调整{% endif %}</a>
+                        <a href="{% url 'inventory_out' %}" class="btn btn-outline-secondary"><i class="bi bi-box-arrow-up me-1" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}Stock out{% else %}出库{% endif %}</a>
+                        <a href="{% url 'inventory_in' %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-1"></i> {% if request.LANGUAGE_CODE == 'en' %}Stock In{% else %}入库{% endif %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% url 'ai_assist:suggestion_adopt' 0 as adopt_probe %}
+<div class="row mb-4" id="replenish">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="panel-heading"><h2><i class="bi bi-lightbulb me-1 text-primary" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}Replenishment suggestions{% else %}补货建议{% endif %}</h2><span class="badge text-bg-light border">{% if request.LANGUAGE_CODE == 'en' %}AI assist{% else %}AI 辅助{% endif %}</span></div>
+                {% if replenish_suggestions %}
+                <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+                    <thead><tr><th>{% if request.LANGUAGE_CODE == 'en' %}Product{% else %}商品{% endif %}</th><th class="text-end">{% if request.LANGUAGE_CODE == 'en' %}Suggested qty{% else %}建议补货{% endif %}</th><th>{% if request.LANGUAGE_CODE == 'en' %}Basis{% else %}依据{% endif %}</th><th class="text-end"></th></tr></thead>
+                    <tbody>{% for s in replenish_suggestions %}<tr>
+                        <td>{% firstof s.product.name s.target_label s.title %}</td>
+                        <td class="text-end text-nowrap">{{ s.suggested_qty|default:'—' }}{% if s.suggested_qty %} {% if request.LANGUAGE_CODE == 'en' %}btl{% else %}瓶{% endif %}{% endif %}</td>
+                        <td class="text-muted small">{{ s.basis|default:'' }}{% if s.explain %}<div class="mt-1 text-body"><span class="badge text-bg-warning me-1">{% if s.ai_source == 'llm' %}AI 解释{% else %}一句话解释{% endif %}</span>{{ s.explain }}</div>{% endif %}{% if s.anomalies %}<div class="mt-1">{% for a in s.anomalies %}<span class="badge {% if a.level == 'high' %}text-bg-danger{% elif a.level == 'warn' %}text-bg-warning{% else %}text-bg-secondary{% endif %} me-1 mb-1 fw-normal text-start text-wrap">{{ a.text }}</span>{% endfor %}</div>{% endif %}</td>
+                        <td class="text-end text-nowrap">{% if adopt_probe %}<form method="post" action="{% url 'ai_assist:suggestion_adopt' s.pk %}" class="d-inline">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="btn btn-sm btn-outline-primary">{% if request.LANGUAGE_CODE == 'en' %}Create draft PO{% else %}生成采购草稿{% endif %}</button></form> <form method="post" action="{% url 'ai_assist:restock_dismiss' s.pk %}" class="d-inline">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="btn btn-sm btn-outline-secondary">{% if request.LANGUAGE_CODE == 'en' %}Dismiss{% else %}忽略{% endif %}</button></form>{% else %}<a class="btn btn-sm btn-outline-primary" href="{% url 'inventory_in' %}?product_id={{ s.product.id }}">{% if request.LANGUAGE_CODE == 'en' %}Stock in{% else %}去入库{% endif %}</a>{% endif %}</td>
+                    </tr>{% endfor %}</tbody>
+                </table></div>
+                {% else %}
+                                <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+                    <thead><tr><th>{% if request.LANGUAGE_CODE == 'en' %}Product{% else %}商品{% endif %}</th><th class="text-end">{% if request.LANGUAGE_CODE == 'en' %}Stock / alert{% else %}库存 / 预警{% endif %}</th><th class="text-end">{% if request.LANGUAGE_CODE == 'en' %}Refill to{% else %}建议补至{% endif %}</th><th class="text-end"></th></tr></thead>
+                    <tbody>
+                    {% for item in inventory_items %}{% if item.quantity <= item.warning_level %}<tr>
+                        <td>{{ item.product.name }}</td>
+                        <td class="text-end"><span class="text-danger">{{ item.quantity }}</span> / {{ item.warning_level }}</td>
+                        <td class="text-end">{% widthratio item.warning_level 1 2 %}</td>
+                        <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'inventory_in' %}?product_id={{ item.product.id }}">{% if request.LANGUAGE_CODE == 'en' %}Stock in{% else %}去入库{% endif %}</a></td>
+                    </tr>{% endif %}{% empty %}<tr><td colspan="4" class="text-muted">{% if request.LANGUAGE_CODE == 'en' %}No inventory data yet.{% else %}暂无库存数据。{% endif %}</td></tr>{% endfor %}
+                    </tbody>
+                </table></div>
+                <p class="form-text mb-0 mt-2"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}Basis: items at or below their alert level; refill target = 2 × alert level. Nothing is ordered automatically.{% else %}依据：库存 ≤ 预警数量的商品；建议补至 = 预警数量 × 2。系统不会自动下单，入库需人工确认。{% endif %}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <!-- 搜索和筛选表单 -->
+                <form method="get" action="{% url 'inventory_list' %}" id="filterForm" class="mb-4">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                                <input type="text" name="search" class="form-control" value="{{ search_query }}" placeholder="{% if request.LANGUAGE_CODE == 'en' %}Search product name or barcode...{% else %}搜索商品名称或条码...{% endif %}">
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="d-flex flex-wrap gap-2">
+                                <select name="category" aria-label="分类筛选" class="form-select" style="width: auto;" onchange="this.form.submit()">
+                                    <option value="">{% if request.LANGUAGE_CODE == 'en' %}All Categories{% else %}所有分类{% endif %}</option>
+                                    {% for category in categories %}
+                                    <option value="{{ category.id }}" {% if selected_category == category.id|stringformat:"i" %}selected{% endif %}>
+                                        {{ category.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                
+                                <select name="color" aria-label="颜色筛选" class="form-select" style="width: auto;" onchange="this.form.submit()">
+                                    <option value="">{% if request.LANGUAGE_CODE == 'en' %}All Colors{% else %}所有颜色{% endif %}</option>
+                                    {% for color_code, color_name in colors %}
+                                    {% if color_code %}<option value="{{ color_code }}" {% if selected_color == color_code %}selected{% endif %}>
+                                        {{ color_name }}
+                                    </option>{% endif %}
+                                    {% endfor %}
+                                </select>
+                                
+                                <select name="size" aria-label="尺码筛选" class="form-select" style="width: auto;" onchange="this.form.submit()">
+                                    <option value="">{% if request.LANGUAGE_CODE == 'en' %}All Sizes{% else %}所有尺码{% endif %}</option>
+                                    {% for size_code, size_name in sizes %}
+                                    {% if size_code %}<option value="{{ size_code }}" {% if selected_size == size_code %}selected{% endif %}>
+                                        {{ size_name }}
+                                    </option>{% endif %}
+                                    {% endfor %}
+                                </select>
+                                
+                                <button type="submit" class="btn btn-primary">{% if request.LANGUAGE_CODE == 'en' %}Filter{% else %}筛选{% endif %}</button>
+                                {% if selected_category or selected_color or selected_size or search_query %}
+                                <a href="{% url 'inventory_list' %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle me-1"></i>{% if request.LANGUAGE_CODE == 'en' %}Clear Filters{% else %}清除筛选{% endif %}
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </form>
+                
+                <!-- 库存状态过滤 -->
+                <div class="d-flex mb-4">
+                    <div class="btn-group" id="stockFilter">
+                        <button type="button" class="btn btn-outline-secondary active" data-filter="all">{% if request.LANGUAGE_CODE == 'en' %}All{% else %}全部{% endif %}</button>
+                        <button type="button" class="btn btn-outline-danger" data-filter="low">{% if request.LANGUAGE_CODE == 'en' %}Low Stock{% else %}库存预警{% endif %}</button>
+                        <button type="button" class="btn btn-outline-success" data-filter="normal">{% if request.LANGUAGE_CODE == 'en' %}Normal{% else %}库存正常{% endif %}</button>
+                    </div>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>{% if request.LANGUAGE_CODE == 'en' %}Product{% else %}商品信息{% endif %}</th>
+                                <th>{% if request.LANGUAGE_CODE == 'en' %}Category{% else %}分类{% endif %}</th>
+                                <th>{% if request.LANGUAGE_CODE == 'en' %}Color / Size{% else %}颜色/尺码{% endif %}</th>
+                                <th>{% if request.LANGUAGE_CODE == 'en' %}Current Stock{% else %}当前库存{% endif %}</th>
+                                <th>{% if request.LANGUAGE_CODE == 'en' %}Warning Level{% else %}预警库存{% endif %}</th>
+                                <th>{% if request.LANGUAGE_CODE == 'en' %}Status{% else %}状态{% endif %}</th>
+                                <th>{% if request.LANGUAGE_CODE == 'en' %}Actions{% else %}操作{% endif %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in inventory_items %}
+                            <tr data-stock-status="{% if item.quantity <= item.warning_level %}low{% else %}normal{% endif %}">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-shrink-0 me-3">
+                                            {% if item.product.image %}
+                                            <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" class="rounded" width="48" height="48" style="object-fit: cover;">
+                                            {% else %}
+                                            <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 48px; height: 48px">
+                                                <i class="bi bi-box text-secondary"></i>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0">{{ item.product.name }}</h6>
+                                            <small class="text-muted">{{ item.product.barcode }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info text-dark">{{ item.product.category.name }}</span>
+                                </td>
+                                <td>
+                                    {% if item.product.color %}
+                                    <span class="badge bg-secondary">{{ item.product.get_color_display }}</span>
+                                    {% endif %}
+                                    
+                                    {% if item.product.size %}
+                                    <span class="badge bg-dark">{{ item.product.get_size_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="fw-bold fs-5">{{ item.quantity }}</span>
+                                </td>
+                                <td>
+                                    <span class="text-muted">{{ item.warning_level }}</span>
+                                </td>
+                                <td>
+                                    {% if item.quantity <= item.warning_level %}
+                                    <span class="badge bg-danger">{% if request.LANGUAGE_CODE == 'en' %}Low Stock{% else %}库存不足{% endif %}</span>
+                                    {% else %}
+                                    <span class="badge bg-success">{% if request.LANGUAGE_CODE == 'en' %}Normal{% else %}正常{% endif %}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{% url 'inventory_in' %}?product_id={{ item.product.id }}" class="btn btn-sm btn-outline-primary" title="入库">
+                                            <i class="bi bi-box-arrow-in-down"></i>
+                                        </a>
+                                        <a href="{% url 'inventory_out' %}?product_id={{ item.product.id }}" class="btn btn-sm btn-outline-warning" title="出库">
+                                            <i class="bi bi-box-arrow-up"></i>
+                                        </a>
+                                        <a href="{% url 'inventory_adjust' %}?product_id={{ item.product.id }}" class="btn btn-sm btn-outline-info" title="调整">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center py-5">
+                                    <div class="d-flex flex-column align-items-center">
+                                        <i class="bi bi-clipboard-x text-muted" style="font-size: 2.5rem;"></i>
+                                        <p class="mt-3 mb-1">{% if request.LANGUAGE_CODE == 'en' %}No inventory data yet{% else %}暂无库存数据{% endif %}</p>
+                                        <small class="text-muted">
+                                            {% if search_query or selected_category or selected_color or selected_size %}
+                                            {% if request.LANGUAGE_CODE == 'en' %}No inventory matches the current filters{% else %}没有找到符合筛选条件的库存，请尝试调整筛选条件{% endif %}
+                                            {% else %}
+                                            {% if request.LANGUAGE_CODE == 'en' %}Click Stock In to add inventory{% else %}点击"入库"按钮添加库存{% endif %}
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- 分页控件 -->
+                {% if inventory_items %}
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <div class="text-muted small">
+                        {% if request.LANGUAGE_CODE == 'en' %}Showing 1 to {{ inventory_items|length }} of {{ inventory_items|length }} records{% else %}显示 1 至 {{ inventory_items|length }} 条，共 {{ inventory_items|length }} 条记录{% endif %}
+                    </div>
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" aria-label="Previous">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" aria-label="Next">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 库存状态筛选
+        const stockFilterButtons = document.querySelectorAll('#stockFilter button');
+        stockFilterButtons.forEach(function(button) {
+            button.addEventListener('click', function() {
+                // 移除所有按钮的active类
+                stockFilterButtons.forEach(btn => btn.classList.remove('active'));
+                // 添加当前按钮的active类
+                this.classList.add('active');
+                
+                const filterType = this.dataset.filter;
+                const rows = document.querySelectorAll('tbody tr');
+                
+                rows.forEach(function(row) {
+                    // 忽略空行
+                    if (!row.querySelector('td:first-child')) return;
+                    
+                    const stockStatus = row.dataset.stockStatus;
+                    
+                    if (filterType === 'all' || stockStatus === filterType) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}

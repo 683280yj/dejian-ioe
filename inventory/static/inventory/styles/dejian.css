@@ -1,0 +1,177 @@
+/* 租户外观覆盖层（加载在全部原版 IOE 样式之后）
+ * 只做：主色（默认可被租户覆盖）、字号上调、文字字标、毛玻璃质感（网格底/玻璃顶栏/frost 卡片/表头）。
+ * 布局、组件、配色体系仍是原版 IOE（Bootstrap 5 + HeroUI）。 */
+
+:root, [data-theme="light"] {
+    --accent: #6e1f2c;
+    --accent-foreground: #fff;
+    --primary-color: #6e1f2c;
+    --secondary-color: #6e1f2c;
+    --soft-accent: #f6ecee;
+    --accent-rgb: 110, 31, 44;
+    --bs-primary: #6e1f2c;
+    --bs-primary-rgb: 110, 31, 44;
+    --bs-primary-text-emphasis: #4f1620;
+    --bs-primary-bg-subtle: #f6ecee;
+    --bs-primary-border-subtle: #dfc0c5;
+    --bs-link-color: #6e1f2c;
+    --bs-link-color-rgb: 110, 31, 44;
+    --bs-link-hover-color: #4f1620;
+    --bs-link-hover-color-rgb: 79, 22, 32;
+    --bs-focus-ring-color: rgba(110, 31, 44, .25);
+}
+
+[data-theme="dark"] {
+    --accent: #d78a93;
+    --accent-foreground: #2a0d12;
+    --primary-color: #d78a93;
+    --secondary-color: #d78a93;
+    --soft-accent: #3a2328;
+    --accent-rgb: 215, 138, 147;
+    --bs-primary: #d78a93;
+    --bs-primary-rgb: 215, 138, 147;
+    --bs-primary-text-emphasis: #ecbcc2;
+    --bs-primary-bg-subtle: #3a2328;
+    --bs-primary-border-subtle: #6b3a41;
+    --bs-link-color: #d78a93;
+    --bs-link-color-rgb: 215, 138, 147;
+    --bs-link-hover-color: #ecbcc2;
+    --bs-focus-ring-color: rgba(215, 138, 147, .3);
+}
+
+.form-control:focus, .form-select:focus { border-color: rgba(var(--accent-rgb), .55); box-shadow: 0 0 0 .2rem rgba(var(--accent-rgb), .15); }
+.form-check-input:checked { background-color: var(--accent); border-color: var(--accent); }
+.page-item.active .page-link, .active > .page-link { background-color: var(--accent); border-color: var(--accent); }
+.nav-pills .nav-link.active { background-color: var(--accent); }
+.btn-outline-primary { --bs-btn-color: var(--accent); --bs-btn-border-color: var(--accent); --bs-btn-hover-bg: var(--accent); --bs-btn-hover-border-color: var(--accent); --bs-btn-hover-color: var(--accent-foreground); --bs-btn-active-bg: var(--accent); --bs-btn-active-border-color: var(--accent); }
+
+/* 品牌：纯文字字标，系统字体加粗，酒红 */
+.dejian-wordmark { font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif; font-weight: 700; font-size: 19px; letter-spacing: .06em; color: var(--accent); line-height: 36px; white-space: nowrap; }
+[data-theme="dark"] .dejian-wordmark { color: var(--foreground); }
+
+/* 质感：米纸细网格底、毛玻璃胶囊顶栏、半透明卡片。布局与组件仍是原版 IOE。 */
+:root, [data-theme="light"] {
+    --background: #f4ecdd;
+    --ink: #33231b;
+    --glass-bg: rgba(255, 253, 247, .78);           /* .glass */
+    --glass-border: rgba(255, 255, 255, .88);
+    --glass-shadow: inset 0 0 20px rgba(255, 255, 255, .38), 0 10px 30px rgba(110, 31, 44, .13);
+    --frost-bg: rgba(255, 253, 247, .78);            /* .frost-panel */
+    --frost-border: rgba(255, 255, 255, .82);
+    --frost-shadow: inset 0 0 16px rgba(255, 255, 255, .3), 0 6px 22px rgba(110, 31, 44, .10);
+    --glass-soft-bg: rgba(255, 253, 247, .65);
+}
+body {
+    background-color: var(--background);
+    background-image:
+        radial-gradient(circle at 44% 22%, rgba(255, 251, 238, .85) 0 6%, transparent 34%),
+        linear-gradient(rgba(110, 31, 44, .05) 1px, transparent 0),
+        linear-gradient(90deg, rgba(110, 31, 44, .05) 1px, transparent 0);
+    background-size: 100% 100%, 28px 28px, 28px 28px;
+    background-attachment: fixed;
+}
+[data-theme="dark"] body { background-image: linear-gradient(rgba(255, 255, 255, .03) 1px, transparent 0), linear-gradient(90deg, rgba(255, 255, 255, .03) 1px, transparent 0); }
+.app-layout .app-sidebar { background: rgba(255, 253, 247, .75); border-right-color: var(--glass-border); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.app-layout .app-topbar {
+    position: sticky; top: 8px; z-index: 1030;
+    margin: 8px 18px 0; border: 1px solid var(--glass-border); border-radius: 999px;
+    background: var(--glass-bg); box-shadow: var(--glass-shadow);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+}
+.card { background: var(--frost-bg); border: 1px solid var(--frost-border); box-shadow: var(--frost-shadow); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }  /* .frost-panel */
+.page-header-card { background: transparent; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.card .table { --bs-table-bg: transparent; }
+[data-theme="dark"] .app-layout .app-sidebar, [data-theme="dark"] .app-layout .app-topbar { background: rgba(27, 31, 40, .78); border-color: var(--separator); box-shadow: none; }
+[data-theme="dark"] .card { background: var(--surface); border-color: var(--separator); box-shadow: none; }
+/* 侧栏底色铺满整页：.app-sidebar 为 position:fixed（高 = 视口），长页面在整页截图里底部会露出页面底色。
+   桌面端改由 body 上一层全文档高度的 ::before 来画侧栏底色与右边框，侧栏本身透明；移动端抽屉不受影响。 */
+@media (min-width: 992px) {
+  body.app-layout { position: relative; min-height: 100vh; }
+  body.app-layout::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 190px; z-index: 0; pointer-events: none;
+    background: rgba(255, 253, 247, .75); border-right: 1px solid var(--glass-border); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  [data-theme="dark"] body.app-layout::before { background: rgba(27, 31, 40, .78); border-right-color: var(--separator); }
+  .app-layout .app-sidebar, [data-theme="dark"] .app-layout .app-sidebar { background: transparent; border-right-color: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+@media (max-width: 991px) { .app-layout .app-sidebar, [data-theme="dark"] .app-layout .app-sidebar { background: var(--surface); } }
+@media print { body.app-layout::before { display: none; } }
+@media (max-width: 767px) { .app-layout .app-topbar { margin: 6px 8px 0; top: 6px; border-radius: 18px; } }
+
+/* 字号上调一档：原版正文 14px → 15px，其余随之 +1~2px */
+body { font-size: 15px; }
+.nav-section { font-size: 11px; }
+.sidebar-link { font-size: 14px; }
+.breadcrumbs, .account-button, .language-switcher, .global-search input, .global-search .search-field__input, .language-form .select__trigger { font-size: 13px; }
+.button, .button.button--sm, .btn-group-sm > .button, .button, .btn.button { font-size: 14px; }
+.btn { --bs-btn-font-size: 14px; }
+.btn-sm { --bs-btn-font-size: 13px; }
+.form-control, .form-select, .ioe-select .select__trigger, .ioe-search .search-field__input, .ioe-select-popover .list-box-item { font-size: 14px; }
+.form-grid .form-control, .form-grid .form-select, .hero-form :is(input.form-control, .select__trigger), .hero-form textarea.form-control { font-size: 14px !important; }
+.form-label, .input-group-text, .editor-field .label { font-size: 13px; }
+.form-text, .editor-field .description { font-size: 12px; }
+.table, .table.data-table, .table.data-table > tbody > tr > td, .product-table td, .table h6 { font-size: 14px; }
+.table thead th, .table.data-table > thead > tr > th, .product-table th { font-size: 12px; }
+.table small, .table.data-table td small { font-size: 12px; }
+.table.data-table td :is(h1,h2,h3,h4,h5,h6,.h1,.h2,.h3,.h4,.h5,.h6,.fs-1,.fs-2,.fs-3,.fs-4,.fs-5,.fs-6) { font-size: 14px !important; }
+.badge, .table.data-table .badge { font-size: 12px; }
+.alert, .dropdown-menu, .page-link { font-size: 14px; }
+.page-heading p, .page-header-card p, .report-banner p { font-size: 14px; }
+.stat-top, .rank-quantity { font-size: 13px; }
+.stat-meta, .panel-heading p, .subtle-link, .chart-legend, .panel-period, .eyebrow, .date-label { font-size: 12px; }
+.quick-link, .rank-row, .activity-row p, .empty-state, .report-card p, .report-card-footer, .inventory-counts div, .member-stat-grid .card-title { font-size: 13px; }
+.quick-tip, .rank-number, .rank-info small, .inventory-notice p, .stock-summary, .empty-state p, .activity-row time, .activity-row small, .login-note, .app-footer { font-size: 12px; }
+.inventory-notice h3 { font-size: 14px; }
+.login-intro p { font-size: 15px; }
+.login-features span { font-size: 13px; }
+.login-card > p { font-size: 14px; }
+
+/* b2b / 列表组 / 表头毛玻璃（仅浅色；.glass / .frost-panel / .glass-soft） */
+html:not([data-theme="dark"]) .list-group {
+    --bs-list-group-bg: var(--frost-bg);
+    --bs-list-group-border-color: var(--frost-border);
+    box-shadow: var(--frost-shadow);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+}
+html:not([data-theme="dark"]) .list-group-item { background: transparent; border-color: rgba(110, 31, 44, .09); }
+html:not([data-theme="dark"]) .table > thead,
+html:not([data-theme="dark"]) .table thead tr {
+    background: var(--glass-soft-bg);
+    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+}
+html:not([data-theme="dark"]) .table > thead > tr > th,
+html:not([data-theme="dark"]) .table thead th {
+    background: transparent;
+    color: var(--ink, #33231b);
+    border-bottom: 1px solid rgba(255, 255, 255, .78);
+    font-weight: 600;
+}
+html:not([data-theme="dark"]) .card .table { --bs-table-bg: transparent; }
+html:not([data-theme="dark"]) .card .table > :not(caption) > * > * { border-color: rgba(110, 31, 44, .09); }
+
+/* To B 页：胶囊导航 + 概览指标卡 */
+.b2b-page { max-width: 1100px; }
+.b2b-nav-pill {
+    display: inline-flex; align-items: center;
+    padding: .4rem .85rem; border-radius: 9999px; font-size: 13px; white-space: nowrap;
+    color: #7d6a58; text-decoration: none;
+    background: rgba(255, 255, 255, .45); border: 1px solid rgba(255, 255, 255, .78);
+    transition: color .2s ease, background-color .2s ease, box-shadow .2s ease;
+}
+.b2b-nav-pill:hover { color: var(--ink, #33231b); background: rgba(255, 255, 255, .7); }
+.b2b-nav-pill.is-active {
+    color: var(--ink, #33231b); background: rgba(255, 255, 255, .9); font-weight: 700;
+    box-shadow: 0 2px 10px rgba(110, 31, 44, .12);
+}
+.b2b-stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+}
+.b2b-stat { padding: 16px 18px; }
+.b2b-stat .stat-top { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+.b2b-stat .stat-value { font-size: 28px; font-weight: 700; color: var(--ink, #33231b); line-height: 1.1; }
+.b2b-stat .stat-meta { margin-top: 6px; font-size: 12px; color: var(--muted); }
+[data-theme="dark"] .b2b-nav-pill { background: var(--surface); border-color: var(--separator); color: var(--muted); }
+[data-theme="dark"] .b2b-nav-pill.is-active { background: var(--soft-accent); color: var(--accent); box-shadow: none; }
+[data-theme="dark"] .b2b-stat .stat-value { color: var(--foreground); }
+
+/* b2b 页标题保持在左、操作在右（IOE 的 page-action-bar 规则会把整行推到右侧） */
+.b2b-page .page-heading { justify-content: space-between !important; }

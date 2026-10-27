@@ -1,0 +1,116 @@
+{% load static %}
+{% with ui_asset_version="20261028-dj8" %}
+<!DOCTYPE html>
+<html lang="{{ request.LANGUAGE_CODE|default:'zh-hans' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#fafafa">
+    <title>{% block title %}{{ tenant_wordmark }} · 筹策{% endblock %}</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='{{ tenant_primary|urlencode:'' }}'/%3E%3Ctext x='16' y='23' font-size='20' font-weight='700' text-anchor='middle' fill='%23fff' font-family='sans-serif'%3E{{ tenant_wordmark|first|urlencode:'' }}%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="{% static 'inventory/vendor/heroui/heroui.min.css' %}">
+    <link rel="stylesheet" href="{% static 'inventory/vendor/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'inventory/vendor/bootstrap-icons.min.css' %}">
+    <link rel="stylesheet" href="{% static 'inventory/vendor/sweetalert2.min.css' %}">
+    {% block head %}{% endblock %}
+    {% block extra_css %}{% endblock %}
+    <link rel="stylesheet" href="{% static 'inventory/app.css' %}?v={{ ui_asset_version }}">
+    <link rel="stylesheet" href="{% static 'inventory/styles/controls.css' %}?v={{ ui_asset_version }}">
+    <link rel="stylesheet" href="{% static 'inventory/styles/tables.css' %}?v={{ ui_asset_version }}">
+    <link rel="stylesheet" href="{% static 'inventory/styles/reports.css' %}?v={{ ui_asset_version }}">
+    <link rel="stylesheet" href="{% static 'inventory/styles/forms.css' %}?v={{ ui_asset_version }}">
+    <link rel="stylesheet" href="{% static 'inventory/styles/checkout.css' %}?v={{ ui_asset_version }}">
+    <link rel="stylesheet" href="{% static 'inventory/styles/dejian.css' %}?v={{ ui_asset_version }}">
+    {% if tenant_custom_color %}<style>:root, [data-theme="light"] { --accent: {{ tenant_primary }}; --primary-color: {{ tenant_primary }}; --secondary-color: {{ tenant_primary }}; --accent-rgb: {{ tenant_primary_rgb }}; --bs-primary: {{ tenant_primary }}; --bs-primary-rgb: {{ tenant_primary_rgb }}; --bs-link-color: {{ tenant_primary }}; --bs-link-color-rgb: {{ tenant_primary_rgb }}; --bs-link-hover-color: {{ tenant_primary }}; --soft-accent: rgba({{ tenant_primary_rgb }}, .08); --bs-primary-bg-subtle: rgba({{ tenant_primary_rgb }}, .08); --bs-focus-ring-color: rgba({{ tenant_primary_rgb }}, .25); }</style>{% endif %}
+    <script src="{% static 'inventory/theme.js' %}?v={{ ui_asset_version }}"></script>
+</head>
+<body class="{% if request.user.is_authenticated %}app-layout{% else %}auth-layout{% endif %}" data-page="{{ request.resolver_match.url_name }}">
+    <a class="skip-link" href="#main-content">{% if request.LANGUAGE_CODE == 'en' %}Skip to content{% else %}跳转到主要内容{% endif %}</a>
+    {% if request.user.is_authenticated %}
+    <aside class="app-sidebar" id="app-sidebar" aria-label="{% if request.LANGUAGE_CODE == 'en' %}Main navigation{% else %}主导航{% endif %}">
+        <a class="ioe-brand" href="{% url 'index' %}" aria-label="{{ tenant_wordmark }}">
+            <span class="dejian-wordmark">{{ tenant_wordmark }}</span>
+        </a>
+        {% url 'b2b:dashboard' as b2b_url %}
+        <nav class="sidebar-nav">
+            <span class="nav-section">{% if request.LANGUAGE_CODE == 'en' %}WORKSPACE{% else %}工作空间{% endif %}</span>
+            <a class="sidebar-link {% if request.path == '/' %}active{% endif %}" href="{% url 'index' %}"><i class="bi bi-grid-1x2" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}Overview{% else %}经营概览{% endif %}</a>
+            <a class="sidebar-link {% if request.resolver_match.url_name == 'sale_create' %}active{% endif %}" href="{% url 'sale_create' %}"><i class="bi bi-basket2" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}Checkout{% else %}收银台{% endif %}<span class="nav-shortcut">POS</span></a>
+            <span class="nav-section">{% if request.LANGUAGE_CODE == 'en' %}STORE MANAGEMENT{% else %}门店管理{% endif %}</span>
+            <a class="sidebar-link {% if '/products/' in request.path %}active{% endif %}" href="{% url 'product_list' %}"><i class="bi bi-box-seam" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}Products{% else %}商品管理{% endif %}</a>
+            <a class="sidebar-link {% if '/categories/' in request.path %}active{% endif %}" href="{% url 'category_list' %}"><i class="bi bi-tags" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}Categories{% else %}商品分类{% endif %}</a>
+            <a class="sidebar-link {% if '/inventory/' in request.path %}active{% endif %}" href="{% url 'inventory_list' %}"><i class="bi bi-archive" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}Inventory{% else %}库存管理{% endif %}</a>
+            <a class="sidebar-link {% if '/inventory-checks/' in request.path %}active{% endif %}" href="{% url 'inventory_check_list' %}"><i class="bi bi-clipboard-check" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}Stocktaking{% else %}库存盘点{% endif %}</a>
+            <a class="sidebar-link {% if '/sales/' in request.path and request.resolver_match.url_name != 'sale_create' %}active{% endif %}" href="{% url 'sale_list' %}"><i class="bi bi-receipt" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}Sales{% else %}销售订单{% endif %}</a>
+            <a class="sidebar-link {% if '/members/' in request.path %}active{% endif %}" href="{% url 'member_list' %}"><i class="bi bi-people" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}Members{% else %}会员管理{% endif %}</a>
+            <a class="sidebar-link {% if '/member-levels/' in request.path %}active{% endif %}" href="{% url 'member_level_list' %}"><i class="bi bi-gem" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}Member levels{% else %}会员等级{% endif %}</a>
+            {% if b2b_url %}<a class="sidebar-link {% if b2b_url in request.path %}active{% endif %}" href="{{ b2b_url }}"><i class="bi bi-building" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}B2B trade{% else %}To B 交易{% endif %}</a>{% endif %}
+            <span class="nav-section">{% if request.LANGUAGE_CODE == 'en' %}INSIGHTS{% else %}数据与分析{% endif %}</span>
+            <a class="sidebar-link {% if '/reports/' in request.path %}active{% endif %}" href="{% url 'reports_index' %}"><i class="bi bi-bar-chart-line" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}Reports{% else %}报表中心{% endif %}</a>
+            {% if current_tenant %}<a class="sidebar-link {% if '/tenancy/import/' in request.path %}active{% endif %}" href="{% url 'tenancy:import' %}"><i class="bi bi-upload" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}Data import{% else %}数据导入{% endif %}</a>{% endif %}
+            {% if can_edit_branding %}<a class="sidebar-link {% if '/tenancy/branding/' in request.path %}active{% endif %}" href="{% url 'tenancy:branding' %}"><i class="bi bi-palette" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}Branding{% else %}企业外观{% endif %}</a>{% endif %}
+            {% if request.user.is_superuser %}
+            <a class="sidebar-link {% if '/system/' in request.path %}active{% endif %}" href="{% url 'system_settings' %}"><i class="bi bi-sliders2" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}Settings{% else %}系统设置{% endif %}</a>
+            {% endif %}
+        </nav>
+
+    </aside>
+    <button class="sidebar-backdrop" type="button" tabindex="-1" aria-label="{% if request.LANGUAGE_CODE == 'en' %}Close navigation{% else %}关闭导航{% endif %}" hidden></button>
+    {% endif %}
+    <div class="app-workspace" id="app-workspace">
+        <header class="app-topbar">
+            <div class="topbar-leading">
+                {% if request.user.is_authenticated %}
+                <button class="button button--tertiary button--icon-only mobile-menu-toggle" type="button" aria-controls="app-sidebar" aria-expanded="false" aria-label="{% if request.LANGUAGE_CODE == 'en' %}Open navigation{% else %}展开导航{% endif %}"><i class="bi bi-list" aria-hidden="true"></i></button>
+                <div class="breadcrumbs"><span>{% if request.LANGUAGE_CODE == 'en' %}Workspace{% else %}工作空间{% endif %}</span><i class="bi bi-chevron-right" aria-hidden="true"></i><strong id="current-page-label">筹策</strong></div>
+                {% else %}<a class="ioe-brand" href="{% url 'index' %}"><span class="dejian-wordmark">{{ tenant_wordmark }}</span></a>{% endif %}
+            </div>
+            <div class="topbar-actions">
+                {% if request.user.is_authenticated %}
+                <form class="global-search" action="{% url 'product_list' %}" method="get" role="search"><i class="bi bi-search" aria-hidden="true"></i><input type="search" name="search" aria-label="{% if request.LANGUAGE_CODE == 'en' %}Search products{% else %}搜索商品{% endif %}" placeholder="{% if request.LANGUAGE_CODE == 'en' %}Search products...{% else %}搜索商品、条码…{% endif %}"><kbd>/</kbd></form>
+                {% endif %}
+                {% url 'tenancy:switch' as brand_switch_url %}
+                {% if brand_switch_url and tenant_brands or brand_switch_url and user_memberships|length > 1 %}
+                <form action="{{ brand_switch_url }}" method="post" class="language-form brand-form">
+                    {% csrf_token %}<input name="next" type="hidden" value="{{ request.get_full_path }}">
+                    <i class="bi bi-building" aria-hidden="true"></i>
+                    {% if user_memberships|length > 1 %}<select name="tenant_id" class="language-switcher" onchange="this.form.brand_id && (this.form.brand_id.disabled = true); this.form.submit()" aria-label="{% if request.LANGUAGE_CODE == 'en' %}Company{% else %}企业{% endif %}">{% for m in user_memberships %}<option value="{{ m.tenant.pk }}" {% if current_tenant and m.tenant.pk == current_tenant.pk %}selected{% endif %}>{{ m.tenant.name }}</option>{% endfor %}</select>{% elif current_tenant %}<input type="hidden" name="tenant_id" value="{{ current_tenant.pk }}">{% endif %}
+                    {% if tenant_brands %}<select name="brand_id" class="language-switcher" onchange="this.form.submit()" aria-label="{% if request.LANGUAGE_CODE == 'en' %}Brand{% else %}品牌{% endif %}"><option value="">{% if request.LANGUAGE_CODE == 'en' %}All brands{% else %}全部品牌{% endif %}</option>{% for b in tenant_brands %}<option value="{{ b.pk }}" {% if current_brand and b.pk == current_brand.pk %}selected{% endif %}>{{ b.name }}</option>{% endfor %}</select>{% endif %}
+                </form>
+                {% endif %}
+                <button class="button button--tertiary button--icon-only theme-toggle" type="button" aria-pressed="false" aria-label="{% if request.LANGUAGE_CODE == 'en' %}Dark mode{% else %}深色模式{% endif %}" title="{% if request.LANGUAGE_CODE == 'en' %}Switch theme{% else %}切换主题{% endif %}"><i class="bi bi-moon" aria-hidden="true"></i></button>
+                <form action="{% url 'set_language' %}" method="post" class="language-form">
+                    {% csrf_token %}<input name="next" type="hidden" value="{{ request.get_full_path }}">
+                    <i class="bi bi-globe2" aria-hidden="true"></i>
+                    <select name="language" class="language-switcher" onchange="this.form.submit()" aria-label="{% if request.LANGUAGE_CODE == 'en' %}Language{% else %}语言{% endif %}"><option value="zh-hans" {% if request.LANGUAGE_CODE != 'en' %}selected{% endif %}>中文</option><option value="en" {% if request.LANGUAGE_CODE == 'en' %}selected{% endif %}>English</option></select>
+                </form>
+                {% if request.user.is_authenticated %}
+                <div class="dropdown"><button class="account-button" type="button" data-bs-toggle="dropdown" aria-expanded="false"><span class="user-avatar">{{ request.user.username|first|upper }}</span><span class="account-name">{{ request.user.username }}</span><i class="bi bi-chevron-down" aria-hidden="true"></i></button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        {% if current_tenant or current_role_label %}<li><h6 class="dropdown-header">{{ current_tenant.name|default:'' }}{% if current_role_label %} · {{ current_role_label }}{% endif %}</h6></li>{% endif %}
+                        {% if request.user.is_superuser %}<li><a class="dropdown-item" href="{% url 'system_settings' %}"><i class="bi bi-gear me-2" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}Settings{% else %}系统设置{% endif %}</a></li>{% endif %}
+                        <li><form action="{% url 'logout' %}" method="post">{% csrf_token %}<button type="submit" class="dropdown-item"><i class="bi bi-box-arrow-right me-2" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}Log out{% else %}退出登录{% endif %}</button></form></li>
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </header>
+        <main class="main-content" id="main-content" tabindex="-1">
+            {% if messages %}<div class="app-messages">{% for message in messages %}<div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} alert-dismissible fade show" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{% if request.LANGUAGE_CODE == 'en' %}Dismiss{% else %}关闭提示{% endif %}"></button></div>{% endfor %}</div>{% endif %}
+            {% block content %}{% endblock %}
+        </main>
+
+    </div>
+    <script src="{% static 'inventory/vendor/jquery.min.js' %}"></script>
+    <script src="{% static 'inventory/vendor/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% static 'inventory/vendor/sweetalert2.all.min.js' %}"></script>
+    <script src="{% static 'inventory/charts.js' %}?v={{ ui_asset_version }}"></script>
+    <script src="{% static 'inventory/app.js' %}?v={{ ui_asset_version }}"></script>
+    <script src="{% static 'inventory/components.js' %}?v={{ ui_asset_version }}"></script>
+    <script src="{% static 'inventory/controls.js' %}?v={{ ui_asset_version }}"></script>
+    <script src="{% static 'inventory/layout.js' %}?v={{ ui_asset_version }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
+
+{% endwith %}

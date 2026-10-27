@@ -1,0 +1,28 @@
+{% extends "inventory/base.html" %}
+{% block title %}批发订单{% endblock %}
+{% block content %}
+<div class="b2b-page">
+  <div class="page-heading"><h1 class="page-title">批发订单</h1>
+    <div class="heading-actions"><a class="button button--primary" href="{% url 'b2b:so_create' %}">新建批发订单</a></div>
+  </div>
+  {% include "b2b/_nav.html" %}
+  <section class="card">
+    <div class="panel-heading">
+      <h2>批发订单列表</h2>
+      <form method="get" class="d-flex gap-2 align-items-center mb-0">
+        <select name="status" class="form-select form-select-sm" style="max-width:180px"><option value="">全部状态</option>{% for v, n in status_choices %}<option value="{{ v }}" {% if status == v %}selected{% endif %}>{{ n }}</option>{% endfor %}</select>
+        <button class="btn btn-sm btn-outline-primary" type="submit">筛选</button>
+      </form>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead><tr><th>单号</th><th>客户</th><th>状态</th><th>金额</th><th>创建</th></tr></thead>
+        <tbody>
+        {% for o in orders %}<tr><td><a href="{% url 'b2b:so_detail' o.pk %}">{{ o.number }}</a></td><td>{{ o.customer }}</td><td>{{ o.get_status_display }}</td><td>{{ o.total_amount }}</td><td>{{ o.created_at|date:"Y-m-d H:i" }}</td></tr>
+        {% empty %}<tr><td colspan="5" class="text-muted">暂无批发订单</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

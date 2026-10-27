@@ -1,0 +1,31 @@
+{% extends "inventory/base.html" %}
+{% block title %}对账单{% endblock %}
+{% block content %}
+<div class="b2b-page">
+  <div class="page-heading"><h1 class="page-title">对账单：{{ st }} <span class="badge bg-secondary">{{ st.get_status_display }}</span></h1></div>
+  {% include "b2b/_nav.html" %}
+  <section class="card mb-3">
+    <div class="panel-heading"><h2>对账摘要</h2></div>
+    <p class="px-3">系统入库金额：{{ st.system_amount }}　供应商对账金额：{{ st.supplier_amount|default:"未录入" }}　差异：{{ st.difference|default_if_none:"-" }}</p>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead><tr><th>采购单</th><th>入库时间</th><th>入库金额</th></tr></thead>
+        <tbody>
+        {% for o in orders %}<tr><td><a href="{% url 'b2b:po_detail' o.pk %}">{{ o.number }}</a></td><td>{{ o.received_at|date:"Y-m-d" }}</td><td>{{ o.total_received_amount }}</td></tr>
+        {% empty %}<tr><td colspan="3" class="text-muted">期间内无已入库采购单</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% if st.status == 'DRAFT' %}
+  <section class="card mb-3">
+    <div class="panel-heading"><h2>录入供应商金额</h2></div>
+    <div class="p-3"><form method="post">{% csrf_token %}{{ form.as_p }}<button class="btn btn-outline-primary" type="submit">保存供应商金额</button></form></div>
+  </section>
+  <div class="d-flex gap-2">
+    <form method="post" action="{% url 'b2b:statement_decide' st.pk 'confirm' %}">{% csrf_token %}<button class="btn btn-danger" type="submit">确认对账一致</button></form>
+    <form method="post" action="{% url 'b2b:statement_decide' st.pk 'dispute' %}">{% csrf_token %}<button class="btn btn-outline-danger" type="submit">标记争议</button></form>
+  </div>
+  {% else %}<p class="text-muted">由 {{ st.decided_by }} 于 {{ st.decided_at|date:"Y-m-d H:i" }} 处理。</p>{% endif %}
+</div>
+{% endblock %}
