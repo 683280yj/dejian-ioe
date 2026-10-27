@@ -15,6 +15,10 @@ from django.utils.safestring import mark_safe
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 from inventory.models import Sale, SaleItem, Inventory, InventoryTransaction, Member, MemberTransaction, OperationLog, Product, Category, Supplier, MemberLevel
 from inventory.forms import SaleForm, SaleItemForm
 from inventory.models.inventory import update_inventory
@@ -130,14 +134,14 @@ def sale_create(request):
                     if quantity <= 0:
                         raise ValueError("Quantity must be positive")
                 except (ValueError, TypeError):
-                    print(f"Error parsing quantity for product {item_data['product_id']}: Value='{item_data['quantity']}'")
+                    logger.debug(f"Error parsing quantity for product {item_data['product_id']}: Value='{item_data['quantity']}'")
                     messages.error(request, f"商品 {product.name} 的数量 '{item_data['quantity']}' 无效。")
                     valid_products = False
                     continue
 
                 try:
                     raw_price = item_data['price']
-                    print(f"原始价格字符串: '{raw_price}', 类型: {type(raw_price)}")
+                    logger.debug(f"原始价格字符串: '{raw_price}', 类型: {type(raw_price)}")
                     
                     if not isinstance(raw_price, str):
                         raw_price = str(raw_price)
@@ -148,15 +152,15 @@ def sale_create(request):
                         db_price = Product.objects.filter(id=item_data['product_id']).values_list('price', flat=True).first()
                         if db_price:
                             price = Decimal(db_price)
-                            print(f"使用数据库中的商品价格: {price}")
+                            logger.debug(f"使用数据库中的商品价格: {price}")
                     
-                    print(f"成功解析商品 {product.name} 的价格: {price}")
+                    logger.debug(f"成功解析商品 {product.name} 的价格: {price}")
                     
                     if price <= 0:
                         raise ValueError(f"商品价格不能为0或负数: {raw_price}")
                         
                 except (InvalidOperation, ValueError, TypeError) as e:
-                    print(f"Error parsing price for product {item_data['product_id']}: Value='{item_data['price']}', Error: {str(e)}")
+                    logger.debug(f"Error parsing price for product {item_data['product_id']}: Value='{item_data['price']}', Error: {str(e)}")
                     messages.error(request, f"商品 {product.name} 的价格解析错误，请联系管理员。")
                     valid_products = False
                     continue
@@ -165,7 +169,7 @@ def sale_create(request):
                 if inventory_obj.quantity >= quantity:
                     # 确保使用Decimal类型计算小计，避免精度问题
                     subtotal = price * Decimal(str(quantity))
-                    print(f"商品 {product.name} 的小计: 价格={price} * 数量={quantity} = {subtotal}")
+                    logger.debug(f"商品 {product.name} 的小计: 价格={price} * 数量={quantity} = {subtotal}")
                     
                     valid_products_data.append({
                         'product': product,
@@ -175,20 +179,20 @@ def sale_create(request):
                         'inventory': inventory_obj
                     })
                 else:
-                    print(f"Insufficient stock for product {product.id} ({product.name}): needed={quantity}, available={inventory_obj.quantity}")
+                    logger.debug(f"Insufficient stock for product {product.id} ({product.name}): needed={quantity}, available={inventory_obj.quantity}")
                     messages.warning(request, f"商品 {product.name} 库存不足 (需要 {quantity}, 可用 {inventory_obj.quantity})。该商品未添加到销售单。")
                     valid_products = False
 
             except Product.DoesNotExist:
-                print(f"Error processing sale item: Product with ID {item_data['product_id']} does not exist.")
+                logger.debug(f"Error processing sale item: Product with ID {item_data['product_id']} does not exist.")
                 messages.error(request, f"处理商品时出错：无效的商品 ID {item_data['product_id']}。")
                 valid_products = False
             except Inventory.DoesNotExist:
-                print(f"Error processing sale item: Inventory record for product {item_data['product_id']} does not exist.")
+                logger.debug(f"Error processing sale item: Inventory record for product {item_data['product_id']} does not exist.")
                 messages.error(request, f"处理商品 {product.name} 时出错：找不到库存记录。")
                 valid_products = False
             except Exception as e:
-                print(f"Unexpected error processing sale item for product ID {item_data.get('product_id', 'N/A')}: {type(e).__name__} - {e}")
+                logger.debug(f"Unexpected error processing sale item for product ID {item_data.get('product_id', 'N/A')}: {type(e).__name__} - {e}")
                 messages.error(request, f"处理商品 ID {item_data.get('product_id', 'N/A')} 时发生意外错误。请联系管理员。")
                 valid_products = False
         
@@ -198,26 +202,26 @@ def sale_create(request):
             
         for i, item in enumerate(valid_products_data):
             if item['price'] <= 0 or item['subtotal'] <= 0:
-                print(f"警告：商品{i+1} {item['product'].name} 价格或小计为0，尝试从数据库重新获取价格")
+                logger.debug(f"警告：商品{i+1} {item['product'].name} 价格或小计为0，尝试从数据库重新获取价格")
                 db_price = Product.objects.filter(id=item['product'].id).values_list('price', flat=True).first() or Decimal('0')
                 if db_price > 0:
                     item['price'] = Decimal(db_price)
                     item['subtotal'] = item['price'] * Decimal(str(item['quantity']))
-                    print(f"已更新商品 {item['product'].name} 的价格: {item['price']}, 小计: {item['subtotal']}")
+                    logger.debug(f"已更新商品 {item['product'].name} 的价格: {item['price']}, 小计: {item['subtotal']}")
             
         total_amount_calculated = sum(item['subtotal'] for item in valid_products_data)
-        print(f"后端计算的总金额: {total_amount_calculated}, 商品数量: {len(valid_products_data)}")
+        logger.debug(f"后端计算的总金额: {total_amount_calculated}, 商品数量: {len(valid_products_data)}")
         
         if total_amount_calculated == 0 and valid_products_data:
-            print("警告：后端计算的总金额为0，但有有效商品，检查每个商品的金额:")
+            logger.debug("警告：后端计算的总金额为0，但有有效商品，检查每个商品的金额:")
             for i, item in enumerate(valid_products_data):
-                print(f"商品{i+1}: {item['product'].name}, 价格={item['price']}, 数量={item['quantity']}, 小计={item['subtotal']}")
+                logger.debug(f"商品{i+1}: {item['product'].name}, 价格={item['price']}, 数量={item['quantity']}, 小计={item['subtotal']}")
         
         try:
             total_amount_frontend = Decimal(request.POST.get('total_amount', '0.00'))
             discount_amount_frontend = Decimal(request.POST.get('discount_amount', '0.00'))
             final_amount_frontend = Decimal(request.POST.get('final_amount', '0.00'))
-            print(f"前端提交的金额 - 总金额: {total_amount_frontend}, 折扣: {discount_amount_frontend}, 最终金额: {final_amount_frontend}")
+            logger.debug(f"前端提交的金额 - 总金额: {total_amount_frontend}, 折扣: {discount_amount_frontend}, 最终金额: {final_amount_frontend}")
             
             if total_amount_calculated > 0:
                 total_amount = total_amount_calculated
@@ -230,23 +234,23 @@ def sale_create(request):
                         member = Member.objects.get(id=member_id)
                         if member.level and member.level.discount is not None:
                             discount_rate = Decimal(str(member.level.discount))
-                        print(f"会员折扣: 会员ID={member_id}, 折扣率={discount_rate}")
+                        logger.debug(f"会员折扣: 会员ID={member_id}, 折扣率={discount_rate}")
                     except Member.DoesNotExist:
-                        print(f"找不到ID为{member_id}的会员，不应用折扣")
+                        logger.debug(f"找不到ID为{member_id}的会员，不应用折扣")
                 else:
-                    print("无会员信息，不应用折扣")
+                    logger.debug("无会员信息，不应用折扣")
                 
                 discount_amount = total_amount * (Decimal('1.0') - discount_rate)
                 final_amount = total_amount - discount_amount
                 
-                print(f"使用后端计算的金额: 总金额={total_amount}, 折扣率={discount_rate}, 折扣金额={discount_amount}, 最终金额={final_amount}")
+                logger.debug(f"使用后端计算的金额: 总金额={total_amount}, 折扣率={discount_rate}, 折扣金额={discount_amount}, 最终金额={final_amount}")
             elif total_amount_frontend > 0:
                 total_amount = total_amount_frontend
                 discount_amount = discount_amount_frontend
                 final_amount = final_amount_frontend
-                print(f"使用前端提交的金额: 总金额={total_amount}, 折扣金额={discount_amount}, 最终金额={final_amount}")
+                logger.debug(f"使用前端提交的金额: 总金额={total_amount}, 折扣金额={discount_amount}, 最终金额={final_amount}")
             else:
-                print("警告：前端和后端计算的金额都无效，尝试使用数据库价格")
+                logger.debug("警告：前端和后端计算的金额都无效，尝试使用数据库价格")
                 db_total = Decimal('0.00')
                 
                 for item in valid_products_data:
@@ -257,15 +261,15 @@ def sale_create(request):
                     if db_price > 0:
                         item_total = db_price * Decimal(str(quantity))
                         db_total += item_total
-                        print(f"使用数据库价格: 商品ID={product_id}, 价格={db_price}, 数量={quantity}, 小计={item_total}")
+                        logger.debug(f"使用数据库价格: 商品ID={product_id}, 价格={db_price}, 数量={quantity}, 小计={item_total}")
                 
                 total_amount = db_total
                 discount_amount = Decimal('0.00')
                 final_amount = total_amount
-                print(f"使用数据库价格计算的总金额: {total_amount}")
+                logger.debug(f"使用数据库价格计算的总金额: {total_amount}")
                 
         except (InvalidOperation, ValueError, TypeError) as e:
-            print(f"解析金额时出错: {e}，尝试使用数据库中的商品价格")
+            logger.debug(f"解析金额时出错: {e}，尝试使用数据库中的商品价格")
             db_total = Decimal('0.00')
             for item in valid_products_data:
                 product_id = item['product'].id
@@ -281,10 +285,10 @@ def sale_create(request):
             total_amount = db_total
             discount_amount = Decimal('0.00')
             final_amount = total_amount
-            print(f"使用数据库价格计算的总金额: {total_amount}")
+            logger.debug(f"使用数据库价格计算的总金额: {total_amount}")
         
         if total_amount <= 0 and valid_products_data:
-            print("错误：计算的总金额仍然为0或负数，拒绝创建销售单")
+            logger.debug("错误：计算的总金额仍然为0或负数，拒绝创建销售单")
             messages.error(request, '销售单金额无效，请检查商品价格后重试。')
             return redirect('sale_create')
 
@@ -361,11 +365,11 @@ def sale_create(request):
                         
                         if not sale_item.subtotal or sale_item.subtotal == 0:
                             sale_item.subtotal = sale_item.price * sale_item.quantity
-                            print(f"重新计算小计: {sale_item.price} * {sale_item.quantity} = {sale_item.subtotal}")
+                            logger.debug(f"重新计算小计: {sale_item.price} * {sale_item.quantity} = {sale_item.subtotal}")
                         
                         models.Model.save(sale_item)
                         
-                        print(f"保存的SaleItem - ID: {sale_item.id}, 商品: {sale_item.product.name}, "
+                        logger.debug(f"保存的SaleItem - ID: {sale_item.id}, 商品: {sale_item.product.name}, "
                               f"价格: {sale_item.price}, 数量: {sale_item.quantity}, 小计: {sale_item.subtotal}")
                         
                         with connection.cursor() as cursor:
@@ -373,10 +377,10 @@ def sale_create(request):
                                 "UPDATE inventory_saleitem SET price = %s, actual_price = %s, subtotal = %s WHERE id = %s",
                                 [str(item_data['price']), str(item_data['price']), str(item_data['subtotal']), sale_item.id]
                             )
-                            print(f"直接执行SQL更新SaleItem记录: id={sale_item.id}, price={item_data['price']}, subtotal={item_data['subtotal']}")
+                            logger.debug(f"直接执行SQL更新SaleItem记录: id={sale_item.id}, price={item_data['price']}, subtotal={item_data['subtotal']}")
                         
                         sale_item = SaleItem.objects.get(id=sale_item.id)
-                        print(f"重新加载后的SaleItem - ID: {sale_item.id}, 价格: {sale_item.price}, 小计: {sale_item.subtotal}")
+                        logger.debug(f"重新加载后的SaleItem - ID: {sale_item.id}, 价格: {sale_item.price}, 小计: {sale_item.subtotal}")
                         
                         # 在事务内锁定并复查库存，避免并发收银同时通过事务外库存校验后超卖。
                         inventory_obj = Inventory.objects.select_for_update().get(product=item_data['product'])
@@ -425,22 +429,22 @@ def sale_create(request):
                         final_str = str(final_amount)
                         points = int(final_amount) if final_amount else 0
                         
-                        print(f"更新销售单最终金额: total={total_str}, discount={discount_str}, final={final_str}, points={points}")
+                        logger.debug(f"更新销售单最终金额: total={total_str}, discount={discount_str}, final={final_str}, points={points}")
                         
                         cursor.execute(
                             "UPDATE inventory_sale SET total_amount = %s, discount_amount = %s, final_amount = %s, points_earned = %s WHERE id = %s",
                             [total_str, discount_str, final_str, points, sale.id]
                         )
-                        print(f"直接执行SQL更新Sale记录: id={sale.id}, total={total_str}, discount={discount_str}, final={final_str}")
+                        logger.debug(f"直接执行SQL更新Sale记录: id={sale.id}, total={total_str}, discount={discount_str}, final={final_str}")
                 
                 refreshed_sale = get_object_or_404(Sale, pk=sale.id)
-                print(f"刷新后的销售单金额: total={refreshed_sale.total_amount}, discount={refreshed_sale.discount_amount}, final={refreshed_sale.final_amount}")
+                logger.debug(f"刷新后的销售单金额: total={refreshed_sale.total_amount}, discount={refreshed_sale.discount_amount}, final={refreshed_sale.final_amount}")
                 
                 messages.success(request, '销售单创建成功')
                 return redirect('sale_detail', sale_id=sale.id)
                 
             except Exception as e:
-                print(f"创建销售单时发生错误: {type(e).__name__} - {e}")
+                logger.debug(f"创建销售单时发生错误: {type(e).__name__} - {e}")
                 messages.error(request, f'创建销售单时发生错误: {str(e)}')
                 return redirect('sale_create')
         else:
