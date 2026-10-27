@@ -105,6 +105,91 @@
     <script src="{% static 'inventory/controls.js' %}?v={{ ui_asset_version }}"></script>
     <script src="{% static 'inventory/layout.js' %}?v={{ ui_asset_version }}"></script>
     {% block extra_js %}{% endblock %}
+{% if request.user.is_authenticated %}
+<div id="cc-assistant">
+  <button id="cc-open" type="button">问筹策助手</button>
+  <div id="cc-panel" hidden>
+    <div class="cc-head">
+      <span class="cc-dot"></span>
+      <div class="cc-title"><b>筹策助手</b><small>在线 · 补货的事问我就行</small></div>
+      <button id="cc-close" type="button" aria-label="关闭">&times;</button>
+    </div>
+    <div id="cc-msgs" aria-live="polite"></div>
+    <form id="cc-form">
+      <input id="cc-input" type="text" placeholder="例如：哪条最急？为什么补这么多？" autocomplete="off">
+      <button type="submit">发送</button>
+    </form>
+  </div>
+</div>
+<style>
+#cc-open{position:fixed;right:22px;bottom:22px;z-index:1080;border:1px solid rgba(224,165,90,.5);background:linear-gradient(180deg,#9c3f46,#6f2a30);color:#f5eedf;border-radius:999px;padding:11px 20px;font-size:14.5px;box-shadow:0 10px 26px rgba(42,21,18,.35);cursor:pointer}
+#cc-panel{position:fixed;right:22px;bottom:22px;z-index:1081;width:min(380px,calc(100vw - 32px));height:min(560px,calc(100vh - 110px));background:#fffdf7;border:1px solid rgba(135,53,59,.3);border-radius:16px;box-shadow:0 24px 60px rgba(42,21,18,.35);display:flex;flex-direction:column;overflow:hidden}
+#cc-panel[hidden]{display:none}
+.cc-head{display:flex;align-items:center;gap:10px;padding:13px 16px;background:linear-gradient(180deg,#87353b,#6f2a30);color:#f5eedf}
+.cc-dot{width:9px;height:9px;border-radius:50%;background:#8fd18a;flex:none}
+.cc-title{display:flex;flex-direction:column;line-height:1.3}
+.cc-title small{font-size:12px;color:#e8cdb2}
+#cc-close{margin-left:auto;background:none;border:0;color:#f5eedf;font-size:22px;line-height:1;cursor:pointer;padding:2px 6px}
+#cc-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:#faf5ea}
+.cc-msg{max-width:88%;padding:9px 13px;border-radius:13px;font-size:14px;line-height:1.65;white-space:pre-line;word-break:break-word}
+.cc-msg.bot{align-self:flex-start;background:#fff;border:1px solid rgba(135,53,59,.16);border-bottom-left-radius:4px;color:#33231b}
+.cc-msg.me{align-self:flex-end;background:#87353b;color:#f5eedf;border-bottom-right-radius:4px}
+#cc-form{display:flex;gap:8px;padding:11px;border-top:1px solid rgba(135,53,59,.16);background:#fffdf7}
+#cc-input{flex:1;border:1px solid rgba(135,53,59,.3);border-radius:999px;padding:9px 15px;font-size:14px;min-height:42px}
+#cc-input:focus{outline:2px solid rgba(224,165,90,.6);outline-offset:0}
+#cc-form button{border:0;border-radius:999px;background:#87353b;color:#f5eedf;padding:0 18px;font-size:14px;cursor:pointer}
+</style>
+<script>
+(function(){
+  var openBtn=document.getElementById('cc-open'), panel=document.getElementById('cc-panel'),
+      msgs=document.getElementById('cc-msgs'), form=document.getElementById('cc-form'),
+      input=document.getElementById('cc-input'), inited=false;
+  function cookie(n){var m=document.cookie.match(new RegExp('(?:^|; )'+n+'=([^;]*)'));return m?decodeURIComponent(m[1]):'';}
+  function add(text,cls){var d=document.createElement('div');d.className='cc-msg '+cls;d.textContent=text;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d;}
+  function send(payload){
+    var qs=new URLSearchParams(payload).toString();
+    return fetch('{% url "ai_assist:assistant_chat" %}?'+qs).then(function(r){return r.json();});
+  }
+  function csrfToken(){
+    var c=cookie('csrftoken'); if(c) return c;
+    var i=document.querySelector('input[name=csrfmiddlewaretoken]'); return i?i.value:'';
+  }
+  function runAdopt(pks){
+    var base='{% url "ai_assist:restock_adopt" 0 %}', chain=Promise.resolve(), failed='';
+    pks.forEach(function(pk){
+      chain=chain.then(function(){
+        var body=new URLSearchParams({csrfmiddlewaretoken:csrfToken(), next:location.pathname});
+        return fetch(base.replace('/0/','/'+pk+'/'),{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()})
+          .then(function(r){ if(!r.ok){ return r.text().then(function(t){ failed=t||'没办成'; }); } });
+      });
+    });
+    chain.then(function(){
+      if(failed){ add(failed.indexOf('访客')>-1 ? '体验账号是只读的，这一步没真生成。正式账号里你这样跟我说一声，草稿就直接办好了。' : ('没办成：'+failed), 'bot'); }
+      else { add('办好了，采购草稿已经生成，去采购单里能看到（还是草稿，要你再提交审核）。页面马上刷新。', 'bot'); setTimeout(function(){ location.reload(); }, 1400); }
+    });
+  }
+  function handle(d, t){
+    t.textContent=d.reply; msgs.scrollTop=msgs.scrollHeight;
+    if(d.action && d.action.adopt_pks && d.action.adopt_pks.length){ runAdopt(d.action.adopt_pks); }
+  }
+  function toggle(show){
+    panel.hidden=!show; openBtn.style.display=show?'none':'';
+    if(show&&!inited){inited=true;var t=add('正在为你看今天的补货建议…','bot');
+      send({init:1}).then(function(d){handle(d,t);})
+      .catch(function(){t.textContent='我这边暂时连不上，你先看左侧的补货建议列表。';});}
+    if(show){input.focus();}
+  }
+  openBtn.addEventListener('click',function(){toggle(true);});
+  document.getElementById('cc-close').addEventListener('click',function(){toggle(false);});
+  form.addEventListener('submit',function(e){
+    e.preventDefault();var text=input.value.trim();if(!text)return;input.value='';
+    add(text,'me');var t=add('…','bot');
+    send({message:text}).then(function(d){handle(d,t);})
+    .catch(function(){t.textContent='刚才没发出去，再试一次。';});
+  });
+})();
+</script>
+{% endif %}
 </body>
 </html>
 
