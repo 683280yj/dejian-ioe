@@ -79,11 +79,6 @@
                 </form>
                 {% endif %}
                 <button class="button button--tertiary button--icon-only theme-toggle" type="button" aria-pressed="false" aria-label="{% if request.LANGUAGE_CODE == 'en' %}Dark mode{% else %}深色模式{% endif %}" title="{% if request.LANGUAGE_CODE == 'en' %}Switch theme{% else %}切换主题{% endif %}"><i class="bi bi-moon" aria-hidden="true"></i></button>
-                <form action="{% url 'set_language' %}" method="post" class="language-form">
-                    {% csrf_token %}<input name="next" type="hidden" value="{{ request.get_full_path }}">
-                    <i class="bi bi-globe2" aria-hidden="true"></i>
-                    <select name="language" class="language-switcher" onchange="this.form.submit()" aria-label="{% if request.LANGUAGE_CODE == 'en' %}Language{% else %}语言{% endif %}"><option value="zh-hans" {% if request.LANGUAGE_CODE != 'en' %}selected{% endif %}>中文</option><option value="en" {% if request.LANGUAGE_CODE == 'en' %}selected{% endif %}>English</option></select>
-                </form>
                 {% if request.user.is_authenticated %}
                 <div class="dropdown"><button class="account-button" type="button" data-bs-toggle="dropdown" aria-expanded="false"><span class="user-avatar">{{ request.user.username|first|upper }}</span><span class="account-name">{{ request.user.username }}</span><i class="bi bi-chevron-down" aria-hidden="true"></i></button>
                     <ul class="dropdown-menu dropdown-menu-end">

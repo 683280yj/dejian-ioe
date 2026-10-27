@@ -101,18 +101,6 @@ class ProductDetailTests(TestCase):
         )
         self.assertNotContains(response, f'href="{reverse("sale_detail", args=[other_sale.pk])}"')
 
-    def test_english_empty_state_and_inactive_status(self):
-        self.product.is_active = False
-        self.product.save(update_fields=['is_active'])
-        Inventory.objects.create(product=self.product, quantity=0)
-
-        response = self.client.get(self.url, HTTP_ACCEPT_LANGUAGE='en')
-
-        for text in ('Product Details', 'Inactive', 'Current Stock', 'Low stock',
-                     'No product images yet', 'No sales records yet'):
-            self.assertContains(response, text)
-        self.assertNotContains(response, 'No inventory record yet')
-
     def test_missing_product_returns_404(self):
         self.assertEqual(self.client.get(reverse('product_detail', args=[999999])).status_code, 404)
 

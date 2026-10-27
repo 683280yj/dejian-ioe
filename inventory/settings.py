@@ -15,7 +15,10 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('SECRET_KEY', 'p5k!d@$v_z@6i*+j$9x7b!n=o(h&w#q)s@l^m*g3r+t(u-v_y')
+SECRET_KEY = os.environ.get('SECRET_KEY', '')
+if not SECRET_KEY:
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured('SECRET_KEY 未设置：请通过环境变量提供（见部署 env 文件）')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
@@ -66,8 +69,8 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'inventory.middleware_locale.IgnoreAcceptLanguageMiddleware',  # 只认手动切换，不按浏览器语言自动切英文
-    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'django.middleware.locale.LocaleMiddleware',  # 保留：模板用 request.LANGUAGE_CODE；界面语言已锁定中文（LANGUAGES 只留 zh-hans）
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'tenancy.middleware.TenantMiddleware',
@@ -135,7 +138,6 @@ LANGUAGE_CODE = 'zh-hans'
 
 LANGUAGES = [
     ('zh-hans', '中文'),
-    ('en', 'English'),
 ]
 
 TIME_ZONE = 'Asia/Shanghai'
