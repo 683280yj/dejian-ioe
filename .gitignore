@@ -97,3 +97,10 @@ _wt/
 output/
 .venv
 .venv-local
+
+# site-redesign 构建产物
+site-redesign/dist/
+site-redesign/node_modules/
+*.tsbuildinfo
+site-redesign/vite.config.d.ts
+site-redesign/vite.config.js
