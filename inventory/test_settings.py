@@ -1,8 +1,13 @@
 """Run isolated tests: python manage.py test --settings=inventory.test_settings"""
 
 import atexit
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
+
+# 测试专用密钥：仅当环境未提供 SECRET_KEY 时兜底，生产部署不受影响
+if not os.environ.get('SECRET_KEY'):
+    os.environ['SECRET_KEY'] = 'test-only-insecure-secret-key'
 
 from inventory.settings import *
 
