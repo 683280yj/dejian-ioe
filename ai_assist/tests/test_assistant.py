@@ -4,7 +4,7 @@ import io
 import json
 import os
 
-from django.test import SimpleTestCase, RequestFactory
+from django.test import SimpleTestCase, TestCase, RequestFactory
 
 from ai_assist import assistant, chat_api, tools, views
 
@@ -122,10 +122,11 @@ class AssistantReplyTests(SimpleTestCase):
         self.assertEqual(action, {'adopt_pks': [1]})
         self.assertIn('确认', text)
 
-    def test_toolbox_is_read_only_except_adopt(self):
+    def test_toolbox_write_tools_whitelisted(self):
         for name, (_fn, is_write) in tools.TOOLBOX.items():
-            if name != 'adopt_suggestions':
+            if name not in ('adopt_suggestions', 'create_product'):
                 self.assertFalse(is_write)
+
 
     def test_purchase_confirmation_does_not_call_model(self):
         request = RequestFactory().post('/ai/assistant/chat/', {'message': '生成草稿'})
@@ -139,3 +140,64 @@ class AssistantReplyTests(SimpleTestCase):
         self.assertIsNone(json.loads(response.content)['action'])
         self.assertTrue(request.session['assistant_state']['pending_adopt'])
         model.assert_not_called()
+
+
+class CreateProductToolTests(SimpleTestCase):
+    def test_create_product_tool_validates_without_db(self):
+        result = tools.execute('create_product', {'name': '', 'price': 1, 'cost': 2}, 'tenant')
+        self.assertIn('error', result)
+        result = tools.execute('create_product', {'name': 'X', 'price': 'abc', 'cost': 2}, 'tenant')
+        self.assertIn('error', result)
+        result = tools.execute('create_product', {'name': 'X', 'price': -1, 'cost': 2}, 'tenant')
+        self.assertIn('error', result)
+
+
+class CreateProductConfirmFlowTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from tenancy.models import Membership, Role, Tenant
+        self.tenant = Tenant.objects.create(name='测试企业', code='test-ai-prod')
+        self.boss = get_user_model().objects.create_user('boss1', password='x')
+        Membership.objects.create(user=self.boss, tenant=self.tenant, role=Role.BOSS)
+        self.sales = get_user_model().objects.create_user('sales1', password='x')
+        Membership.objects.create(user=self.sales, tenant=self.tenant, role=Role.SALES)
+        self.spec = {'name': '酱香新品', 'price': '128.00', 'cost': '66.00',
+                     'category': '酱香型', 'specification': '53度/500ml'}
+
+    def _request(self, user, state, message):
+        from tenancy.models import Membership, Role
+        request = RequestFactory().post('/ai/assistant/chat/', {'message': message})
+        request.user = user
+        request.tenant = self.tenant
+        request.membership = Membership.objects.get(user=user, tenant=self.tenant)
+        request.session = dict(state) if state else {}
+        return request
+
+    def test_confirm_creates_product(self):
+        from inventory.models import Product
+        request = self._request(self.boss, {'pending_create_product': self.spec}, '好')
+        request.session['assistant_state'] = {'pending_create_product': self.spec}
+        with patch('ai_assist.views.restock_suggestions', return_value=(None, [])):
+            response = views.assistant_chat(request)
+        self.assertEqual(response.status_code, 200)
+        p = Product.objects.get(tenant=self.tenant, name='酱香新品')
+        self.assertEqual(p.category.name, '酱香型')
+        self.assertTrue(p.barcode)
+        self.assertNotIn('pending_create_product', request.session.get('assistant_state', {}))
+
+    def test_cancel_does_not_create(self):
+        from inventory.models import Product
+        request = self._request(self.boss, {'pending_create_product': self.spec}, '算了')
+        request.session['assistant_state'] = {'pending_create_product': self.spec}
+        with patch('ai_assist.views.restock_suggestions', return_value=(None, [])):
+            views.assistant_chat(request)
+        self.assertFalse(Product.objects.filter(tenant=self.tenant, name='酱香新品').exists())
+
+    def test_non_boss_denied(self):
+        from inventory.models import Product
+        request = self._request(self.sales, {'pending_create_product': self.spec}, '好')
+        request.session['assistant_state'] = {'pending_create_product': self.spec}
+        with patch('ai_assist.views.restock_suggestions', return_value=(None, [])):
+            response = views.assistant_chat(request)
+        self.assertIn('老板', json.loads(response.content)['reply'])
+        self.assertFalse(Product.objects.filter(tenant=self.tenant, name='酱香新品').exists())

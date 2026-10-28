@@ -13,6 +13,7 @@ from django.views.decorators.http import require_http_methods
 from . import assistant as _assistant
 from . import chat_api
 from . import services
+from . import tools
 from .hints import restock_suggestions
 from .models import Suggestion
 from .workflows import WORKFLOWS
@@ -101,6 +102,32 @@ def assistant_chat(request):
     if not message:
         return JsonResponse({'reply': '先说说你想了解哪条补货建议。'}, status=400)
     previous_state = request.session.get('assistant_state') or {}
+
+    # 商品录入确认链路：上一轮模型发起了 create_product，本轮用户确认/取消
+    if previous_state.get('pending_create_product'):
+        spec = previous_state['pending_create_product']
+        from tenancy.models import Role
+        if not services.user_can(request.user, getattr(request, 'membership', None), Role.BOSS):
+            request.session['assistant_state'] = {}
+            return _chat_response(request, message, '录入商品需要「老板」确认权限，请让老板在商品管理页操作。', None, 'rule')
+        if msg_confirm(message):
+            try:
+                p = tools.create_product(tenant, spec)
+                request.session['assistant_state'] = {}
+                text = (f'✅ 商品已录入：{p.name}（{p.category.name}），'
+                        f'售价 {p.price} 元，成本价 {p.cost} 元，条码 {p.barcode}。'
+                        '如需补充供应商、交期或库存，请到商品管理页继续完善。')
+            except Exception as exc:
+                request.session['assistant_state'] = {}
+                text = f'录入失败：{getattr(exc, "messages", [str(exc)])[0] if hasattr(exc, "messages") else exc}'
+            return _chat_response(request, message, text, None, 'rule')
+        if any(k in message for k in ('不', '取消', '算了', '先不')):
+            request.session['assistant_state'] = {}
+            return _chat_response(request, message, '好，先不录入。需要时再告诉我商品信息。', None, 'rule')
+        # 还没确认：提示等待确认，不进入其他流程
+        return _chat_response(request, message,
+                              f'录入「{spec["name"]}」还没确认：回「好」执行，说「取消」放弃。', None, 'rule')
+
     text, state, action = _assistant.reply(items, message, previous_state)
     request.session['assistant_state'] = state
     model_text = None
@@ -118,9 +145,30 @@ def assistant_chat(request):
             state['pending_adopt'] = model_action['adopt_pks']
             request.session['assistant_state'] = state
             action = None
+        if model_action and model_action.get('create_product'):
+            # 模型发起了商品录入请求：写入待确认状态，下一句「好」由视图落库
+            state = dict(state or {})
+            state['pending_create_product'] = model_action['create_product']
+            request.session['assistant_state'] = state
+            action = None
     history = request.session.get('assistant_history', [])
     request.session['assistant_history'] = (history + [
         {'role': 'user', 'content': message},
         {'role': 'assistant', 'content': text},
     ])[-6:]
     return JsonResponse({'reply': text, 'action': action, 'mode': 'model' if model_text else 'rule'})
+
+
+def msg_confirm(message):
+    """与规则层一致的确认词判定。"""
+    return message in _assistant._CONFIRM or message.startswith(('好', '可以', '确认'))
+
+
+def _chat_response(request, message, text, action, mode):
+    """统一写对话历史并返回 JSON（确认链路短路时使用）。"""
+    history = request.session.get('assistant_history', [])
+    request.session['assistant_history'] = (history + [
+        {'role': 'user', 'content': message},
+        {'role': 'assistant', 'content': text},
+    ])[-6:]
+    return JsonResponse({'reply': text, 'action': action, 'mode': mode})

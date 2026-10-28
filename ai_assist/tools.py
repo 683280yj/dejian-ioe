@@ -5,6 +5,7 @@
 由前端走 POST + CSRF + 权限校验真正执行，模型永不自作主张。
 """
 import json
+from decimal import Decimal
 
 from django.apps import apps
 
@@ -97,6 +98,51 @@ def _tool_adopt_suggestions(tenant, args):
             '确认生成': len(valid), '无效编号': [pk for pk in pks if pk not in valid]}
 
 
+def _tool_create_product(tenant, args):
+    """写操作：只做校验并返回待确认动作，不写库；用户确认后由视图调 create_product 落库。"""
+    from decimal import InvalidOperation
+    name = (args.get('name') or '').strip()
+    if not name:
+        return {'error': '缺少商品名称'}
+    try:
+        price = Decimal(str(args.get('price')))
+        cost = Decimal(str(args.get('cost')))
+    except (InvalidOperation, TypeError, ValueError):
+        return {'error': '售价/成本价必须是数字'}
+    if price < 0 or cost < 0:
+        return {'error': '售价与成本价不能为负数'}
+    Product = apps.get_model('inventory', 'Product')
+    if Product.objects.filter(tenant=tenant, name=name, is_active=True).exists():
+        return {'error': f'已存在同名启用商品「{name}」，如需更新请走商品管理页'}
+    return {'__action__': {'create_product': {
+        'name': name, 'price': str(price), 'cost': str(cost),
+        'category': (args.get('category') or '').strip() or '未分类',
+        'specification': (args.get('specification') or '').strip(),
+        'barcode': (args.get('barcode') or '').strip(),
+        'case_size': int(args.get('case_size') or 1),
+    }},
+        '待录入': name, '售价': str(price), '成本价': str(cost),
+        '说明': '已收到录入请求，等用户在对话里确认后执行。请告诉用户回「好」确认。'}
+
+
+def create_product(tenant, spec):
+    """用户确认后真正落库：条码缺省自动生成，分类缺省建「未分类」。"""
+    import secrets
+    Product = apps.get_model('inventory', 'Product')
+    Category = apps.get_model('inventory', 'Category')
+    cat, _ = Category.objects.get_or_create(
+        tenant=tenant, name=spec.get('category') or '未分类', defaults={'is_active': True})
+    barcode = (spec.get('barcode') or '').strip()
+    while not barcode or Product.objects.filter(barcode=barcode).exists():
+        barcode = 'AI' + secrets.token_hex(5)
+    case = int(spec.get('case_size') or 1)
+    p = Product.objects.create(
+        tenant=tenant, name=spec['name'], category=cat, barcode=barcode,
+        price=Decimal(spec['price']), cost=Decimal(spec['cost']),
+        specification=spec.get('specification') or '', case_size=max(case, 1))
+    return p
+
+
 # name -> (执行函数, 是否写操作)
 TOOLBOX = {
     'query_restock_suggestions': (_tool_query_restock_suggestions, False),
@@ -104,6 +150,7 @@ TOOLBOX = {
     'query_sales_summary': (_tool_query_sales_summary, False),
     'query_pending_drafts': (_tool_query_pending_drafts, False),
     'adopt_suggestions': (_tool_adopt_suggestions, True),
+    'create_product': (_tool_create_product, True),
 }
 
 TOOL_SPECS = [
@@ -135,6 +182,19 @@ TOOL_SPECS = [
             'ids': {'type': 'array', 'items': {'type': 'integer'},
                     'description': '补货建议编号列表（来自 query_restock_suggestions 的编号字段）'}},
             'required': ['ids']}}},
+    {'type': 'function', 'function': {
+        'name': 'create_product',
+        'description': '录入新商品。仅当用户在对话中明确要求录入/新增商品并给出名称、售价、成本价后才可调用；'
+                       '调用后先向用户展示录入清单，用户再次确认才真正创建。条码留空则自动生成，分类留空归入「未分类」',
+        'parameters': {'type': 'object', 'properties': {
+            'name': {'type': 'string', 'description': '商品名称（必填）'},
+            'price': {'type': 'number', 'description': '售价（必填）'},
+            'cost': {'type': 'number', 'description': '成本价（必填）'},
+            'category': {'type': 'string', 'description': '商品分类名称，可留空'},
+            'specification': {'type': 'string', 'description': '规格，如 53度/500ml'},
+            'barcode': {'type': 'string', 'description': '商品条码，留空自动生成'},
+            'case_size': {'type': 'integer', 'description': '箱规(瓶/箱)，默认1'}},
+            'required': ['name', 'price', 'cost']}}},
 ]
 
 
