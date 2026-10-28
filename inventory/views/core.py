@@ -64,8 +64,7 @@ def index(request):
     top_products = SaleItem.objects.filter(
         sale__status='COMPLETED', sale__created_at__gte=week_ago
     )
-    if getattr(request, 'tenant', None) is not None:
-        top_products = top_products.filter(sale__tenant=request.tenant)
+    top_products = top_products.filter(sale__tenant=request.tenant) if getattr(request, 'tenant', None) else top_products.none()
     top_products = top_products.values(
         'product__name'
     ).annotate(
@@ -112,4 +111,4 @@ def index(request):
 @login_required
 def reports_index(request):
     """报表首页视图"""
-    return render(request, 'inventory/reports/index.html') 
+    return render(request, 'inventory/reports/index.html')

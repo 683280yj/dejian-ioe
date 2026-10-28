@@ -90,3 +90,10 @@ yarn-error.log
 
 # 本地 worktree 副本（2026-10-28 重新 init 时补）
 _wt/
+
+# 本地工具缓存
+.playwright-cli/
+.statamcp/
+output/
+.venv
+.venv-local

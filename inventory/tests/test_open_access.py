@@ -63,3 +63,10 @@ class OpenAccessLoginTests(TestCase):
         self.client.post(reverse('open_enter'))
         html = self.client.get('/tenancy/').content.decode()
         self.assertIn('德鉴', html)
+
+    @override_settings(DEJIAN_OPEN_ACCESS=True, DEJIAN_OPEN_ACCESS_USER='dj_boss')
+    def test_external_next_is_rejected_on_get_and_post(self):
+        html = self.client.get(reverse('open_enter') + '?next=https://attacker.example/').content.decode()
+        self.assertNotIn('attacker.example', html)
+        response = self.client.post(reverse('open_enter'), {'next': '//attacker.example/'})
+        self.assertEqual(response['Location'], '/')

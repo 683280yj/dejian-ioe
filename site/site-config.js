@@ -4,17 +4,18 @@
  */
 window.CHOUCE_CONFIG = {
   // 公司全称，显示在页脚版权旁，例如 '贵州某某科技有限公司'
-  companyName: '筹策求知科技有限公司',
+  companyName: '',
 
   // 预约产品讲解：以下三项至少填一项，否则「预约产品讲解」按钮只停留在本页
   bookingUrl: '',   // 预约表单 / 企业微信 / 问卷链接，例如 'https://...'（优先使用）
-  email: '',        // 例如 'hello@example.com'，按钮会打开邮件
+  bookingApiUrl: '/api/bookings/', // 官网预约表单，提交后进入系统后台
+  email: '',        // 若需要公开邮箱，请填写可实际收信的地址
   phone: '',        // 例如 '0851-12345678'，页面显示电话并可一键拨打
 
   // 系统登录页地址，例如 'https://xxx.example.com/login/'
   // 填写后，页面上所有「登录系统」按钮直接打开该地址（新标签页）；
   // 留空时，点「登录系统」会滚动到预约区并提示「系统账号由筹策开通，请先预约讲解」
-  loginUrl: 'http://159.138.136.40:8318/accounts/login/',
+  loginUrl: 'https://ioe.idky.tech/accounts/login/',
 
   // ICP 备案号，例如 '黔ICP备2026000000号-1'（自动链接到 beian.miit.gov.cn）
   icp: '',

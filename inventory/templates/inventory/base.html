@@ -1,13 +1,13 @@
 {% load static %}
-{% with ui_asset_version="20261028-dj8" %}
+{% with ui_asset_version="20261028-chouce1" %}
 <!DOCTYPE html>
 <html lang="{{ request.LANGUAGE_CODE|default:'zh-hans' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#fafafa">
+    <meta name="theme-color" content="#441e1b">
     <title>{% block title %}{{ tenant_wordmark }} · 筹策{% endblock %}</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='{{ tenant_primary|urlencode:'' }}'/%3E%3Ctext x='16' y='23' font-size='20' font-weight='700' text-anchor='middle' fill='%23fff' font-family='sans-serif'%3E{{ tenant_wordmark|first|urlencode:'' }}%3C/text%3E%3C/svg%3E">
+    <link rel="icon" href="{% static 'inventory/images/chouce-mark-v2.svg' %}" type="image/svg+xml">
     <link rel="stylesheet" href="{% static 'inventory/vendor/heroui/heroui.min.css' %}">
     <link rel="stylesheet" href="{% static 'inventory/vendor/bootstrap.min.css' %}">
     <link rel="stylesheet" href="{% static 'inventory/vendor/bootstrap-icons.min.css' %}">
@@ -29,6 +29,7 @@
     {% if request.user.is_authenticated %}
     <aside class="app-sidebar" id="app-sidebar" aria-label="{% if request.LANGUAGE_CODE == 'en' %}Main navigation{% else %}主导航{% endif %}">
         <a class="ioe-brand" href="{% url 'index' %}" aria-label="{{ tenant_wordmark }}">
+            <img class="chouce-mark" src="{% static 'inventory/images/chouce-mark-v2.svg' %}" alt="" width="32" height="32">
             <span class="dejian-wordmark">{{ tenant_wordmark }}</span>
         </a>
         {% url 'b2b:dashboard' as b2b_url %}
@@ -50,6 +51,7 @@
             {% if current_tenant %}<a class="sidebar-link {% if '/tenancy/import/' in request.path %}active{% endif %}" href="{% url 'tenancy:import' %}"><i class="bi bi-upload" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}Data import{% else %}数据导入{% endif %}</a>{% endif %}
             {% if can_edit_branding %}<a class="sidebar-link {% if '/tenancy/branding/' in request.path %}active{% endif %}" href="{% url 'tenancy:branding' %}"><i class="bi bi-palette" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}Branding{% else %}企业外观{% endif %}</a>{% endif %}
             {% if request.user.is_superuser %}
+            <a class="sidebar-link {% if '/admin/inventory/bookinglead/' in request.path %}active{% endif %}" href="{% url 'admin:inventory_bookinglead_changelist' %}"><i class="bi bi-calendar-check" aria-hidden="true"></i>官网预约</a>
             <a class="sidebar-link {% if '/system/' in request.path %}active{% endif %}" href="{% url 'system_settings' %}"><i class="bi bi-sliders2" aria-hidden="true"></i>{% if request.LANGUAGE_CODE == 'en' %}Settings{% else %}系统设置{% endif %}</a>
             {% endif %}
         </nav>
@@ -63,7 +65,7 @@
                 {% if request.user.is_authenticated %}
                 <button class="button button--tertiary button--icon-only mobile-menu-toggle" type="button" aria-controls="app-sidebar" aria-expanded="false" aria-label="{% if request.LANGUAGE_CODE == 'en' %}Open navigation{% else %}展开导航{% endif %}"><i class="bi bi-list" aria-hidden="true"></i></button>
                 <div class="breadcrumbs"><span>{% if request.LANGUAGE_CODE == 'en' %}Workspace{% else %}工作空间{% endif %}</span><i class="bi bi-chevron-right" aria-hidden="true"></i><strong id="current-page-label">筹策</strong></div>
-                {% else %}<a class="ioe-brand" href="{% url 'index' %}"><span class="dejian-wordmark">{{ tenant_wordmark }}</span></a>{% endif %}
+                {% else %}<a class="ioe-brand" href="https://cc.idky.tech/"><img class="chouce-mark" src="{% static 'inventory/images/chouce-mark-v2.svg' %}" alt="" width="32" height="32"><span class="dejian-wordmark">{{ tenant_wordmark }}</span></a>{% endif %}
             </div>
             <div class="topbar-actions">
                 {% if request.user.is_authenticated %}
@@ -147,8 +149,10 @@
   function cookie(n){var m=document.cookie.match(new RegExp('(?:^|; )'+n+'=([^;]*)'));return m?decodeURIComponent(m[1]):'';}
   function add(text,cls){var d=document.createElement('div');d.className='cc-msg '+cls;d.textContent=text;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d;}
   function send(payload){
-    var qs=new URLSearchParams(payload).toString();
-    return fetch('{% url "ai_assist:assistant_chat" %}?'+qs).then(function(r){return r.json();});
+    var init=payload.init;
+    var url='{% url "ai_assist:assistant_chat" %}';
+    return fetch(init?url+'?init=1':url,init?{}:{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':csrfToken()},body:new URLSearchParams(payload).toString()})
+      .then(function(r){if(!r.ok)throw new Error('assistant request failed');return r.json();});
   }
   function csrfToken(){
     var c=cookie('csrftoken'); if(c) return c;

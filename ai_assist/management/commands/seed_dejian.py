@@ -93,7 +93,7 @@ class Command(B2BSeedMixin, BaseCommand):
         if not opts['no_ai']:
             self._run_ai(tenant)
         self.stdout.write(self.style.SUCCESS(
-            f"完成：{tenant.name}；账号 {', '.join(u for u, *_ in P.USERS)} / admin,sales,warehouse / other_boss，密码 {P.DEMO_PASSWORD}（演示用，请上线前修改）"))
+            f"完成：{tenant.name}；账号 {', '.join(u for u, *_ in P.USERS)} / admin,sales,warehouse / other_boss。演示密码由 DEMO_PASSWORD 环境变量提供，未设置时随机生成。"))
 
     # ------------------------------------------------------------------ users
     def _ensure_users(self, tenant):

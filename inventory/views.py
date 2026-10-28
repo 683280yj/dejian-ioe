@@ -1,3 +1,4 @@
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -9,6 +10,8 @@ from django.db.models import Q
 from decimal import Decimal
 from django.utils import timezone
 import re
+
+logger = logging.getLogger(__name__)
 
 
 def product_by_barcode(request, barcode):
@@ -647,7 +650,8 @@ def reports_index(request):
     low_stock_count = Inventory.objects.filter(quantity__lt=F('warning_level')).count() or 0
     
     # 获取充值总金额
-    total_recharge_amount = RechargeRecord.objects.filter(member__in=Member.objects.all()).aggregate(total=Sum('amount'))['total'] or 0
+    recharge_records = RechargeRecord.objects.filter(member__tenant=request.tenant) if getattr(request, 'tenant', None) else RechargeRecord.objects.none()
+    total_recharge_amount = recharge_records.aggregate(total=Sum('amount'))['total'] or 0
     
     # 获取本月销售额
     current_month_start = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -741,12 +745,10 @@ def member_add_ajax(request):
             })
             
         except Exception as e:
-            import traceback
-            print(f"会员添加错误: {str(e)}")
-            print(traceback.format_exc())
+            logger.exception("会员添加失败")
             return JsonResponse({
                 'success': False, 
-                'message': f'添加会员时发生错误: {str(e)}'
+                'message': '添加会员失败，请稍后重试'
             })
     
     return JsonResponse({'success': False, 'message': '不支持的请求方法'})

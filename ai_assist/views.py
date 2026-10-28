@@ -8,8 +8,10 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import NoReverseMatch, reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_http_methods
 
 from . import assistant as _assistant
+from . import chat_api
 from . import services
 from .hints import restock_suggestions
 from .models import Suggestion
@@ -78,8 +80,9 @@ def refresh(request):
 
 
 @login_required
+@require_http_methods(['GET', 'POST'])
 def assistant_chat(request):
-    """筹策助手对话入口（GET，兼容体验库只读访客）。
+    """筹策助手对话入口（POST 聊天，GET 初始化）。
 
     问答不写数据；生成草稿时只返回 adopt 动作，由前端走既有采纳入口
     （POST + CSRF + 权限/只读中间件）真正执行，助手本身不写库。
@@ -92,9 +95,32 @@ def assistant_chat(request):
     for s in items:
         if not s.ai_explanation:
             _explain.ensure_explanation(s, allow_llm=False, persist=False)
-    if request.GET.get('init'):
+    if request.method == 'GET':
         return JsonResponse({'reply': _assistant.briefing(items)})
-    text, state, action = _assistant.reply(items, request.GET.get('message', ''),
-                                           request.session.get('assistant_state'))
+    message = (request.POST.get('message') or '').strip()[:1000]
+    if not message:
+        return JsonResponse({'reply': '先说说你想了解哪条补货建议。'}, status=400)
+    previous_state = request.session.get('assistant_state') or {}
+    text, state, action = _assistant.reply(items, message, previous_state)
     request.session['assistant_state'] = state
-    return JsonResponse({'reply': text, 'action': action})
+    model_text = None
+    # 草稿确认/取消期间保持规则层，避免打断既有确认流程
+    in_adopt_flow = bool(previous_state.get('pending_adopt') or state.get('pending_adopt'))
+    if not in_adopt_flow and not any(
+            word in message for word in ('草稿', '下单', '采购单', '生成', '订货', '取消', '算了')):
+        model_text, model_action = chat_api.answer(tenant, items, message,
+                                                   request.session.get('assistant_history', []))
+        if model_text:
+            text = model_text
+        if model_action and model_action.get('adopt_pks'):
+            # 模型发起了生成草稿请求：写入待确认状态，下一句「好」走规则层确认执行
+            state = dict(state or {})
+            state['pending_adopt'] = model_action['adopt_pks']
+            request.session['assistant_state'] = state
+            action = None
+    history = request.session.get('assistant_history', [])
+    request.session['assistant_history'] = (history + [
+        {'role': 'user', 'content': message},
+        {'role': 'assistant', 'content': text},
+    ])[-6:]
+    return JsonResponse({'reply': text, 'action': action, 'mode': 'model' if model_text else 'rule'})

@@ -20,6 +20,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
 from .views import open_access as open_access_views
+from .views import booking as booking_views
 
 # 导入视图
 from . import views
@@ -39,6 +40,7 @@ from .views import inventory as inventory_views
 from .views import system as system_views  # 导入重构后的系统视图模块
 
 urlpatterns = [
+    path('api/public/bookings/', booking_views.submit_booking, name='submit_booking'),
     path('admin/', admin.site.urls),
     path('i18n/', include('django.conf.urls.i18n')),
     # 德鉴二开：多企业/品牌 + AI 智能决策

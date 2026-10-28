@@ -39,7 +39,7 @@
    +'.cc fieldset{border:1px solid currentColor;border-color:rgba(127,127,127,.35);border-radius:12px;padding:16px;margin:0;display:grid;gap:10px}'
    +'.cc legend{padding:0 6px;font-weight:700}'
    +'.cc label{display:grid;gap:4px;font-size:14px}'
-   +'.cc input,.cc textarea{font:inherit;font-size:15px;padding:8px 10px;border-radius:8px;border:1px solid rgba(127,127,127,.45);background:transparent;color:inherit;width:100%;box-sizing:border-box}'
+   +'.cc input,.cc textarea{font:inherit;font-size:15px;padding:8px 10px;min-height:44px;border-radius:8px;border:1px solid rgba(127,127,127,.45);background:transparent;color:inherit;width:100%;box-sizing:border-box}'
    +'.cc textarea{min-height:72px;font-family:"Geist Mono",ui-monospace,monospace;font-size:13px}'
    +'.cc .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}'
    +'.cc .out{border-radius:12px;padding:18px;background:rgba(135,53,59,.08);display:grid;gap:10px}'

@@ -1,3 +1,4 @@
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -13,6 +14,8 @@ from inventory.ali_barcode_service import AliBarcodeService
 from inventory.services.product_service import search_products
 
 # 外部条码服务API配置（示例用，实际应替换为自己的API密钥）
+logger = logging.getLogger(__name__)
+
 BARCODE_API_APP_KEY = "your_app_key"
 BARCODE_API_APP_SECRET = "your_app_secret"
 BARCODE_API_URL = "https://api.example.com/barcode"
@@ -59,7 +62,7 @@ def barcode_product_create(request):
                         if category:
                             initial_data['category'] = category.id
                     except Exception as e:
-                        print(f"查找商品类别出错: {e}")
+                        logger.warning("查找商品类别出错: %s", e)
                         # 错误处理，但不影响表单的其他字段
                 messages.success(request, '成功获取商品信息，请确认并完善商品详情')
             else:
@@ -83,7 +86,7 @@ def barcode_product_create(request):
                 initial_stock = 0
                 
             # 检查是否已存在该商品的库存记录
-            inventory, created = inventory.models.Inventory.objects.get_or_create(
+            stock_record, created = inventory.models.Inventory.objects.get_or_create(
                 product=product,
                 defaults={'quantity': initial_stock}
             )
@@ -170,6 +173,7 @@ def barcode_scan(request):
     """条码扫描页面，用于测试条码功能"""
     return render(request, 'inventory/barcode/barcode_scan.html')
 
+@login_required
 def product_by_barcode(request, barcode):
     """根据条码查询商品信息的API"""
     try:
@@ -368,6 +372,7 @@ def barcode_template(request):
     messages.info(request, "条码模板设置功能已停用，因为您的商品已有条码。")
     return redirect('product_list')  # 重定向到商品列表页面
 
+@login_required
 def product_search_api(request):
     """通过名称或其他字段搜索商品API"""
     query = request.GET.get('query', '')

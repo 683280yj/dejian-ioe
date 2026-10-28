@@ -38,6 +38,8 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = _env_flag('SECURE_HSTS_INCLUDE_SUBDOMAINS')
 SECURE_HSTS_PRELOAD = _env_flag('SECURE_HSTS_PRELOAD')
 SESSION_COOKIE_SECURE = _env_flag('SESSION_COOKIE_SECURE')
 CSRF_COOKIE_SECURE = _env_flag('CSRF_COOKIE_SECURE')
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SESSION_COOKIE_HTTPONLY = True
 
 # 第三方条码API配置
 BARCODE_API_KEY = ''  # 替换为实际的API密钥
@@ -74,6 +76,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'tenancy.middleware.TenantMiddleware',
+    'tenancy.readonly.ReadOnlyGuestMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'inventory.exceptions.middleware.ExceptionMiddleware',  # 添加自定义异常处理中间件
@@ -110,6 +113,19 @@ DATABASES = {
         'NAME': BASE_DIR / 'db' / 'db.sqlite3',
     }
 }
+if os.environ.get('DB_ENGINE') == 'postgresql':
+    if not os.environ.get('POSTGRES_PASSWORD'):
+        from django.core.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured('POSTGRES_PASSWORD 未设置')
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('POSTGRES_DB', 'dejian'),
+        'USER': os.environ.get('POSTGRES_USER', 'dejian'),
+        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', ''),
+        'HOST': os.environ.get('POSTGRES_HOST', 'db'),
+        'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+        'CONN_MAX_AGE': 60,
+    }
 
 
 # Password validation
@@ -224,3 +240,5 @@ LOGGING = {
 # 生产务必设 DEJIAN_OPEN_ACCESS=0。
 DEJIAN_OPEN_ACCESS = os.environ.get('DEJIAN_OPEN_ACCESS', '0').strip().lower() in ('1', 'true', 'yes', 'on')
 DEJIAN_OPEN_ACCESS_USER = os.environ.get('DEJIAN_OPEN_ACCESS_USER', 'dj_boss').strip() or 'dj_boss'
+READONLY_USERNAMES = ['chouce_guest']
+BOOKING_SUBMISSION_TOKEN = os.environ.get('BOOKING_SUBMISSION_TOKEN', '')

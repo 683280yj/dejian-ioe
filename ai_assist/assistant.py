@@ -2,9 +2,10 @@
 
 结合当前租户的补货建议回答问题、先讲情况再给建议；
 生成采购草稿必须由用户在对话里明确确认后，才调用既有 adopt 服务——AI 不自作主张。
-当前为规则脑（不依赖外部模型）；配好 AI_API_* 后可换 LLM 脑，界面与协议不变。
+采购动作由规则层处理；问答可通过 AI_API_* 接入模型，失败时回退规则回复。
 """
 from . import explain as _explain
+from . import business_answers as _biz
 
 _CN_NUM = {'一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9}
 _CONFIRM = {'好', '好的', '可以', '确认', '行', '嗯', '要', '生成', '就这样', 'ok', 'OK', 'Ok'}
@@ -92,6 +93,19 @@ def reply(items, message, state=None):
     """返回 (回复文本, 新状态, 动作)。动作 None 或 {'adopt_pks': [...]}，由前端走既有采纳入口执行。"""
     state = dict(state or {})
     msg = (message or '').strip()
+
+    # 业务战略、数据分析与解决方案全局问答（无需依赖当前是否有未处理补货项）
+    if any(k in msg for k in ('原始数据', '数据来源', '数据清单', '数据完备', '清洗', '对齐', '脱敏', '数据分析')):
+        return _biz.answer_data_analysis(), state, None
+    if any(k in msg for k in ('痛点', '基线', '优化目标', '约束', '边界', '规则', '预算上限', '发现的问题')):
+        return _biz.answer_problem_and_constraints(), state, None
+    if any(k in msg for k in ('采购方案', '销售方案', '模型', '定价', '促销', '滞留分', '算法', '如何辅助', '怎么介入', '解决方案')):
+        return _biz.answer_solutions(), state, None
+    if any(k in msg for k in ('优化前后', '成果', '对比', '敏感性', '波动', '预测', '份额', '周转', '我的成果')):
+        return _biz.answer_outcomes_and_sensitivity(), state, None
+    if any(k in msg for k in ('创新点', '总结', '效益', '可行性', '发展前景', '总结创新')):
+        return _biz.answer_summary(), state, None
+
     if not items:
         return '目前没有待处理的补货建议。你先去点一次「重新测算」，有建议了我再帮你看。', state, None
 
@@ -111,6 +125,18 @@ def reply(items, message, state=None):
 
 
 def _route(items, msg, state):
+    # 业务战略与数据方案深度问答
+    if any(k in msg for k in ('原始数据', '数据来源', '数据清单', '数据完备', '清洗', '对齐', '脱敏', '数据分析')):
+        return _biz.answer_data_analysis(), state, None
+    if any(k in msg for k in ('痛点', '基线', '优化目标', '约束', '边界', '规则', '预算上限', '发现的问题')):
+        return _biz.answer_problem_and_constraints(), state, None
+    if any(k in msg for k in ('采购方案', '销售方案', '模型', '定价', '促销', '滞留分', '算法', '如何辅助', '怎么介入', '解决方案')):
+        return _biz.answer_solutions(), state, None
+    if any(k in msg for k in ('优化前后', '成果', '对比', '敏感性', '波动', '预测', '份额', '周转', '我的成果')):
+        return _biz.answer_outcomes_and_sensitivity(), state, None
+    if any(k in msg for k in ('创新点', '总结', '效益', '可行性', '发展前景', '总结创新')):
+        return _biz.answer_summary(), state, None
+
     if any(k in msg for k in ('草稿', '下单', '采购单')) or msg in ('生成', '订货'):
         text, state = _ask_adopt(items, msg, state)
         return text, state, None

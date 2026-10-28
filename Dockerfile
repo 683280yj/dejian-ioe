@@ -17,6 +17,9 @@ COPY manage.py ./
 COPY inventory ./inventory
 COPY store ./store
 COPY project ./project
+COPY tenancy ./tenancy
+COPY b2b ./b2b
+COPY ai_assist ./ai_assist
 COPY docker/entrypoint.sh /usr/local/bin/ioe-entrypoint
 RUN chmod 755 /usr/local/bin/ioe-entrypoint \
     && mkdir -p /app/db /app/media /app/staticfiles /app/logs /app/backups /app/temp

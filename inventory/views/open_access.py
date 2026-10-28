@@ -25,10 +25,15 @@ def enter(request):
     if request.user.is_authenticated:
         return redirect(settings.LOGIN_REDIRECT_URL)
 
+    def safe_next(value):
+        return value if value and url_has_allowed_host_and_scheme(
+            value, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+        ) else settings.LOGIN_REDIRECT_URL
+
     if request.method == 'GET':
         return render(request, 'registration/enter.html', {
             'enter_url': reverse('open_enter'),
-            'next': request.GET.get('next') or settings.LOGIN_REDIRECT_URL,
+            'next': safe_next(request.GET.get('next')),
         })
 
     User = get_user_model()
@@ -42,11 +47,7 @@ def enter(request):
         return HttpResponseForbidden('访客账号已停用。')
 
     login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-    next_url = request.POST.get('next') or settings.LOGIN_REDIRECT_URL
-    if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()},
-                                           require_https=request.is_secure()):
-        next_url = settings.LOGIN_REDIRECT_URL
-    return redirect(next_url)
+    return redirect(safe_next(request.POST.get('next')))
 
 
 class OpenAccessLoginView:

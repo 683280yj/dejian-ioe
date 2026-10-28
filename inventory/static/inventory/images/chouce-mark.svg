@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="筹策品牌标识">
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#742d34"/>
+  <path d="M32 12.5 50.5 23 32 33.5 13.5 23Z" fill="#e9ca87"/>
+  <path d="M13.5 27.5 30 37v16L13.5 43.5Z" fill="#f7ead3"/>
+  <path d="M34 37 50.5 27.5v16L34 53Z" fill="#c9965a"/>
+  <path d="m21 23 11-6.2L43 23l-11 6.2Z" fill="#742d34"/>
+</svg>

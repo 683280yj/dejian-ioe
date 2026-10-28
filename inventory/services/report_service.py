@@ -379,9 +379,8 @@ class ReportService:
             end_date = timezone.now()
 
         # 只统计当前企业会员的充值（RechargeRecord 无 tenant 字段）
-        records = RechargeRecord.objects.all()
-        if tenant is not None:
-            records = records.filter(member__tenant=tenant)
+        records = (RechargeRecord.objects.filter(member__tenant=tenant)
+                   if tenant is not None else RechargeRecord.objects.none())
             
         # 总体统计
         summary = {

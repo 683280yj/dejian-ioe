@@ -4,6 +4,8 @@
 全部销量/价格/库存天数均为「演示假设」，不代表真实经营数据。
 商品名称对齐公开产品线称谓（习酒窖藏1988/金钻/银质；德鉴酱香珍藏15/年份窖藏10/柔雅双支礼盒）。
 """
+import os
+import secrets
 
 TENANT = dict(code='dejian', name='贵州德鉴酒业（集团）有限公司', short_name='德鉴酒业',
               industry='白酒 · 酱香', region='贵州省遵义市习水县杉王街道希望社区红城佳园3-3-1号', is_demo=True,
@@ -28,7 +30,7 @@ CHANNELS = [
 ]
 
 SUPPLIERS = [
-    dict(key='JX', name='贵州习酒销售有限公司', contact_person='王经理', phone='0851-0000001', lead=12, lead_sd=3, moq=120),
+    dict(key='JX', name='黔北星禾酒类供应链有限公司', contact_person='王经理', phone='0851-0000001', lead=12, lead_sd=3, moq=120),
     dict(key='RY', name='德鉴酒业灌装车间', contact_person='李主管', phone='0851-0000002', lead=7, lead_sd=1.5, moq=60),
 ]
 
@@ -92,7 +94,7 @@ USERS = [
     ('dj_finance', 'finance', '财务·周', '会计'),
     ('dj_audit', 'auditor', '稽核·吴', '内审'),
 ]
-DEMO_PASSWORD = 'ChangeMe@123'
+DEMO_PASSWORD = os.environ.get('DEMO_PASSWORD') or secrets.token_urlsafe(24)
 
 # 人工现状基线（演示假设，需企业访谈后替换）
 BASELINE = {  # 人工补货基线（演示假设），供 backtest 对照

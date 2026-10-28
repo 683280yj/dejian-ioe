@@ -42,17 +42,83 @@
 
     var book = $('#bookBtn'), lines = $('#clines'), html = '';
     var phone = val('phone'), email = val('email'), url = val('bookingUrl');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) email = '';
     var tel = phone.replace(/[^\d+]/g, '');
     if (url) { book.href = url; if (/^https?:/i.test(url)) { book.target = '_blank'; book.rel = 'noopener'; } }
     else if (email) book.href = 'mailto:' + email + '?subject=' + encodeURIComponent('预约产品讲解');
     else if (phone) book.href = 'tel:' + tel;
-    else book.addEventListener('click', function (e) { e.preventDefault(); toast('预约产品讲解，请联系筹策顾问'); });
+    else book.href = '#contact';
     function esc(s) { return s.replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); }
     if (phone) html += '<li><span>电话</span><a href="tel:' + esc(tel) + '">' + esc(phone) + '</a></li>';
     if (email) html += '<li><span>邮箱</span><a href="mailto:' + esc(email) + '">' + esc(email) + '</a></li>';
     if (html) { lines.innerHTML = html; lines.hidden = false; }
     else if (!url) { var pd = $('#cpending'); if (pd) pd.hidden = false; }
     // 首屏和导航的「预约产品讲解」统一指向问策板块
+  })();
+
+  /* ---------- 预约：由访客确认后通过自己的邮箱发送 ---------- */
+  (function bookingDialog() {
+    var dialog = $('#bookingDialog'), form = $('#bookingForm');
+    if (!dialog || !form || !dialog.showModal) return;
+    var email = val('email');
+    var hasEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    var bookingUrl = val('bookingUrl');
+    var bookingApiUrl = val('bookingApiUrl');
+    var phone = val('phone').replace(/[^\d+]/g, '');
+    $$('a[href="#contact"]:not([data-login]), #bookBtn').forEach(function (a) {
+      if (bookingUrl) {
+        a.href = bookingUrl;
+        if (/^https?:/i.test(bookingUrl)) { a.target = '_blank'; a.rel = 'noopener'; }
+      } else if (bookingApiUrl || hasEmail) {
+        a.addEventListener('click', function (e) { e.preventDefault(); dialog.showModal(); });
+      } else if (phone) {
+        a.href = 'tel:' + phone;
+      } else {
+        a.addEventListener('click', function (e) {
+          e.preventDefault();
+          toast('预约联系方式暂未配置，请稍后再试');
+        });
+      }
+    });
+    $('#bookingClose').addEventListener('click', function () { dialog.close(); });
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      if (bookingApiUrl) {
+        var submit = form.querySelector('button[type="submit"]');
+        submit.disabled = true;
+        try {
+          var response = await fetch(bookingApiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              phone: form.elements.phone.value.trim(),
+              category: form.elements.category.value.trim(),
+              consent: form.elements.consent.checked,
+              website: form.elements.website.value
+            })
+          });
+          var result = await response.json();
+          if (!response.ok) throw new Error(result.message || '暂时无法提交');
+          form.reset();
+          dialog.close();
+          toast('预约已收到，我们会与你联系');
+        } catch (err) {
+          toast(err.message || '暂时无法提交，请稍后重试');
+        } finally {
+          submit.disabled = false;
+        }
+        return;
+      }
+      var email = val('email');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        toast('预约邮箱尚未配置为有效地址，请稍后联系筹策顾问');
+        return;
+      }
+      var subject = encodeURIComponent('筹策产品讲解预约');
+      var body = encodeURIComponent('联系电话：' + form.elements.phone.value.trim() + '\n经营品类：' + form.elements.category.value.trim());
+      window.location.href = 'mailto:' + email + '?subject=' + subject + '&body=' + body;
+      dialog.close();
+    });
   })();
 
   /* ---------- 顶栏 ---------- */
@@ -128,7 +194,9 @@
 
   /* ---------- 问策背景视频：进入视野才加载 ---------- */
   (function video() {
-    var v = $('.cbg'); if (!v || reduce || !('IntersectionObserver' in window)) return;
+    var v = $('.cbg');
+    var connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (!v || reduce || (connection && (connection.saveData || /(^|-)2g$/.test(connection.effectiveType))) || !('IntersectionObserver' in window)) return;
     var vio = new IntersectionObserver(function (es) {
       es.forEach(function (e) {
         if (e.isIntersecting) {

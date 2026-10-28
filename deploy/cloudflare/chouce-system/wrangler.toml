@@ -1,0 +1,9 @@
+name = "chouce-huawei-system"
+main = "src/index.js"
+compatibility_date = "2026-10-28"
+account_id = "dab309b8aac4304fe3d6d2bd15027815"
+workers_dev = true
+
+[[routes]]
+pattern = "ioe.idky.tech"
+custom_domain = true

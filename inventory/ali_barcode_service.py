@@ -1,5 +1,8 @@
 import urllib3
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 from django.conf import settings
 
 class AliBarcodeService:
@@ -25,7 +28,7 @@ class AliBarcodeService:
             appcode = getattr(settings, 'ALI_BARCODE_APPCODE', '')
             
             if not appcode:
-                print("未配置阿里云条形码API的APPCODE")
+                logger.info("条码服务尚未配置")
                 return None
                 
             # 设置请求头，添加APPCODE认证
@@ -80,18 +83,13 @@ class AliBarcodeService:
                             'english_name': res_body.get('engName', '')
                         }
                     else:
-                        print(f"条码查询失败: {res_body.get('remark')}")
-                        print(f"完整响应体: {res_body}")
+                        logger.warning("条码查询未返回商品")
                 else:
-                    print(f"API调用失败: {data.get('showapi_res_error')}")
-                    print(f"完整响应: {data}")
+                    logger.warning("条码服务返回业务错误")
             else:
-                print(f"HTTP请求失败，状态码: {response.status}")
-                print(f"响应内容: {response.data.decode('utf-8', errors='replace')}")
+                logger.warning("条码服务 HTTP 状态: %s", response.status)
                 
             return None
         except Exception as e:
-            print(f"条码查询出错: {e}")
-            import traceback
-            print(f"详细错误信息: {traceback.format_exc()}")
+            logger.exception("条码查询异常")
             return None
