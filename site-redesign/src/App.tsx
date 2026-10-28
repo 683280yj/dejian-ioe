@@ -16,6 +16,31 @@ const LOGIN_URL = 'https://ioe.idky.tech/accounts/login/'
 
 type BookingStatus = 'idle' | 'sending' | 'success' | 'error'
 
+/** 滚动联动：把滚动进度写入 CSS 变量，驱动进度条 / 视差 / 置顶导航状态。 */
+function useScrollLinked() {
+  useEffect(() => {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    let raf = 0
+    const update = () => {
+      raf = 0
+      const y = scrollY
+      const max = document.documentElement.scrollHeight - innerHeight
+      const root = document.documentElement.style
+      root.setProperty('--scroll-progress', max > 0 ? String(Math.min(y / max, 1)) : '0')
+      root.setProperty('--hero-y', `${Math.min(y, 900) * 0.26}px`)
+      root.setProperty('--stage-y', `${Math.min(y, 900) * -0.05}px`)
+      document.documentElement.classList.toggle('scrolled', y > 12)
+    }
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(update) }
+    addEventListener('scroll', onScroll, { passive: true })
+    update()
+    return () => {
+      removeEventListener('scroll', onScroll)
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [])
+}
+
 function DigitalLandscape() {
   return (
     <div className="digital-landscape" aria-hidden="true">
@@ -151,6 +176,7 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [bookingOpen, setBookingOpen] = useState(false)
   const pageRef = useRef<HTMLDivElement>(null)
+  useScrollLinked()
 
   useEffect(() => {
     const root = pageRef.current
@@ -184,6 +210,7 @@ export default function App() {
             <a className="login-button" href={LOGIN_URL}>登录系统</a>
             <button className="primary-button compact" type="button" onClick={() => setBookingOpen(true)}>预约产品讲解</button>
           </div>
+          <div className="scroll-progress" aria-hidden="true" />
         </nav>
       </header>
 
