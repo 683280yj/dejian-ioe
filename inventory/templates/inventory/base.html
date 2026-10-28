@@ -114,6 +114,7 @@
     <div class="cc-head">
       <span class="cc-dot"></span>
       <div class="cc-title"><b>筹策助手</b><small>在线 · 补货的事问我就行</small></div>
+      <button id="cc-clear" type="button" aria-label="清空对话记录" title="清空对话记录" style="margin-left:auto;background:none;border:0;color:#e8cdb2;font-size:13px;cursor:pointer;padding:2px 4px">清空</button>
       <button id="cc-close" type="button" aria-label="关闭">&times;</button>
     </div>
     <div id="cc-msgs" aria-live="polite"></div>
@@ -179,12 +180,24 @@
   function toggle(show){
     panel.hidden=!show; openBtn.style.display=show?'none':'';
     if(show&&!inited){inited=true;var t=add('正在为你看今天的补货建议…','bot');
-      send({init:1}).then(function(d){handle(d,t);})
+      send({init:1}).then(function(d){
+        t.remove();
+        (d.history||[]).forEach(function(h){ add(h.content, h.role==='user'?'me':'bot'); });
+        if(!(d.history||[]).length){ add(d.reply,'bot'); }
+        else { add('有需要随时继续问我。','bot'); }
+      })
       .catch(function(){t.textContent='我这边暂时连不上，你先看左侧的补货建议列表。';});}
     if(show){input.focus();}
   }
   openBtn.addEventListener('click',function(){toggle(true);});
   document.getElementById('cc-close').addEventListener('click',function(){toggle(false);});
+  document.getElementById('cc-clear').addEventListener('click',function(){
+    if(!confirm('确定清空全部对话记录？'))return;
+    fetch('{% url "ai_assist:assistant_chat" %}',{method:'DELETE',headers:{'X-CSRFToken':csrfToken()}})
+      .then(function(r){return r.json();})
+      .then(function(){ msgs.innerHTML=''; add('对话记录已清空。','bot'); })
+      .catch(function(){ add('清空失败，稍后再试。','bot'); });
+  });
   form.addEventListener('submit',function(e){
     e.preventDefault();var text=input.value.trim();if(!text)return;input.value='';
     add(text,'me');var t=add('…','bot');

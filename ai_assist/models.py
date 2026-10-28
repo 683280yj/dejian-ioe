@@ -107,6 +107,25 @@ class Suggestion(models.Model):
         return self.title
 
 
+class ChatTurn(models.Model):
+    """筹策助手对话记录（按企业+用户持久化，刷新页面不丢）。"""
+    tenant = models.ForeignKey(**TENANT)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                             on_delete=models.CASCADE, related_name='+')
+    role = models.CharField(max_length=10, choices=[('user', '用户'), ('assistant', '助手')])
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    objects = TenantManager()
+
+    class Meta:
+        verbose_name = verbose_name_plural = '助手对话记录'
+        ordering = ['created_at', 'id']
+        indexes = [models.Index(fields=['tenant', 'user', 'created_at'])]
+
+    def __str__(self):
+        return f'{self.role}: {self.content[:30]}'
+
+
 class DraftTask(models.Model):
     """人采纳建议后生成的草稿/待办。只有人能把它推进到「已执行」。"""
     KIND_CHOICES = [

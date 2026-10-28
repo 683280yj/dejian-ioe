@@ -218,3 +218,74 @@ class DirectWriteToolTests(TestCase):
                            ('query_sales_summary', {'days': 7}), ('query_pending_drafts', {})]:
             result = tools.execute(name, args, self.tenant, actor=self.boss_actor)
             self.assertNotIn('error', result, f'{name} 失败: {result}')
+
+
+class ChatHistoryTests(TestCase):
+    """对话记录持久化：POST 落库、GET 返回历史、DELETE 清空。"""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from tenancy.models import Membership, Role, Tenant
+        self.tenant = Tenant.objects.create(name='测试企业', code='test-ai-history')
+        self.boss = get_user_model().objects.create_user('boss2', password='x')
+        Membership.objects.create(user=self.boss, tenant=self.tenant, role=Role.BOSS)
+
+    def _request(self, method='post', message=None, init=False):
+        from django.test import RequestFactory
+        request = RequestFactory().request(**({} if init else {'method': method.upper()}))
+        if message is not None:
+            request = RequestFactory().post('/ai/assistant/chat/', {'message': message})
+        request.user = self.boss
+        request.tenant = self.tenant
+        request.membership = None
+        request.session = {}
+        return request
+
+    def _chat(self, message):
+        from django.test import RequestFactory
+        request = RequestFactory().post('/ai/assistant/chat/', {'message': message})
+        request.user = self.boss
+        request.tenant = self.tenant
+        request.membership = None
+        request.session = {}
+        with patch('ai_assist.views.restock_suggestions', return_value=(None, [])), \
+             patch('ai_assist.views.chat_api.configured', return_value=False):
+            return views.assistant_chat(request)
+
+    def test_post_persists_pair(self):
+        from ai_assist.models import ChatTurn
+        response = self._chat('哪条最急')
+        self.assertEqual(response.status_code, 200)
+        turns = ChatTurn.objects.filter(tenant=self.tenant, user=self.boss)
+        self.assertEqual(turns.count(), 2)
+        self.assertEqual([t.role for t in turns], ['user', 'assistant'])
+
+    def test_get_returns_history(self):
+        import json
+        self._chat('哪条最急')
+        from django.test import RequestFactory
+        request = RequestFactory().get('/ai/assistant/chat/')
+        request.user = self.boss
+        request.tenant = self.tenant
+        request.membership = None
+        request.session = {}
+        with patch('ai_assist.views.restock_suggestions', return_value=(None, [])):
+            response = views.assistant_chat(request)
+        history = json.loads(response.content)['history']
+        self.assertEqual(len(history), 2)
+        self.assertEqual(history[0]['role'], 'user')
+
+    def test_delete_clears_history(self):
+        import json
+        self._chat('哪条最急')
+        from django.test import RequestFactory
+        request = RequestFactory().delete('/ai/assistant/chat/')
+        request.user = self.boss
+        request.tenant = self.tenant
+        request.membership = None
+        request.session = {}
+        with patch('ai_assist.views.restock_suggestions', return_value=(None, [])):
+            response = views.assistant_chat(request)
+        from ai_assist.models import ChatTurn
+        self.assertEqual(json.loads(response.content)['history'], [])
+        self.assertFalse(ChatTurn.objects.filter(tenant=self.tenant, user=self.boss).exists())
