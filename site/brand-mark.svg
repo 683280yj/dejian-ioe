@@ -1,7 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="筹策品牌标识">
-  <rect x="2" y="2" width="60" height="60" rx="14" fill="#742d34"/>
-  <path d="M32 12.5 50.5 23 32 33.5 13.5 23Z" fill="#e9ca87"/>
-  <path d="M13.5 27.5 30 37v16L13.5 43.5Z" fill="#f7ead3"/>
-  <path d="M34 37 50.5 27.5v16L34 53Z" fill="#c9965a"/>
-  <path d="m21 23 11-6.2L43 23l-11 6.2Z" fill="#742d34"/>
+  <!-- 筹算标：算筹纵横节律，左起一筹上承、右收一筹下接，中筹金色为「算」的落点 -->
+  <rect x="2" y="2" width="60" height="60" rx="15" fill="#7a2f36"/>
+  <g fill="#f6e7cc">
+    <path d="M14.6 17.4h5.6v29.2h-5.6zM14.6 17.4h20.2v5.1H14.6z"/>
+    <path d="M29.2 33.4h5.6v13.2h-5.6zM29.2 41.5h20.2v5.1H29.2z"/>
+    <path d="M43.8 17.4h5.6v29.2h-5.6z"/>
+  </g>
+  <path d="M29.2 25.6h5.6v5.6h-5.6z" fill="#e6bd6a"/>
 </svg>

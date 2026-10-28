@@ -57,9 +57,10 @@ def _post(body):
         return json.load(response)
 
 
-def answer(tenant, items, message, history=()):
+def answer(tenant, items, message, history=(), actor=None):
     """模型 + 工具循环。返回 (文本, 动作)；失败返回 (None, None) 让规则层接管。
 
+    只读工具直接执行；写工具凭 actor 的老板权限直接落库（权限不足回喂错误）。
     动作形状与规则层一致：{'adopt_pks': [...]}，由前端走既有采纳入口执行。
     """
     if not configured():
@@ -96,10 +97,7 @@ def answer(tenant, items, message, history=()):
                     args = json.loads(call['function'].get('arguments') or '{}')
                 except ValueError:
                     args = {}
-                result = _tools.execute(name, args, tenant)
-                if '__action__' in result:
-                    action = result.pop('__action__') or action
-                    result['说明'] = '已收到生成草稿请求，等用户在对话里确认后执行。请告诉用户回「好」确认。'
+                result = _tools.execute(name, args, tenant, actor=actor)
                 messages.append({'role': 'tool', 'tool_call_id': call.get('id'),
                                  'content': _tools.tool_result_text(result)})
         return '这个问题我查了几轮数据还没理顺，稍后再试试，或换个问法。', action

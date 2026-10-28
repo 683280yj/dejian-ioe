@@ -100,27 +100,32 @@ class AssistantReplyTests(SimpleTestCase):
         second_payload = json.loads(call.call_args.args[0].data)
         self.assertEqual(second_payload['messages'][-1]['role'], 'tool')
 
-    def test_model_adopt_tool_returns_pending_action(self):
+    def test_model_adopt_tool_direct_executes(self):
         msg = {'choices': [{'message': {'tool_calls': [
             {'id': 'call_1', 'function': {'name': 'adopt_suggestions',
                                           'arguments': '{"ids": [1]}'}}]}}]}
-        after = {'choices': [{'message': {'content': '好，请回「好」确认。'}}]}
+        after = {'choices': [{'message': {'content': '已为代理酱香生成采购草稿 PO-1。'}}]}
 
         class Response:
             def __init__(self, body): self._b = body
             def __enter__(self): return io.BytesIO(json.dumps(self._b).encode())
             def __exit__(self, *args): pass
 
+        sug = SimpleNamespace(pk=1, target_label='代理酱香', title='代理酱香')
+        actor = (SimpleNamespace(is_authenticated=True, is_superuser=True), None)
         responses = [Response(msg), Response(after)]
         with patch.dict(os.environ, {'AI_API_BASE': 'https://example.invalid/v1',
                                      'AI_API_KEY': 'test-key', 'AI_API_MODEL': 'test-model'}), \
              patch('ai_assist.chat_api.urllib.request.urlopen',
                    side_effect=lambda req, *a, **k: responses.pop(0)), \
-             patch.object(tools.Suggestion.objects, 'filter',
-                          return_value=SimpleNamespace(values_list=lambda *a, **k: [1])) as _qs:
-            text, action = chat_api.answer('tenant', self.items, '给第一条生成草稿')
-        self.assertEqual(action, {'adopt_pks': [1]})
-        self.assertIn('确认', text)
+             patch('ai_assist.tools.Suggestion') as fake_sug, \
+             patch('ai_assist.services.adopt',
+                   return_value=SimpleNamespace(external_ref='PO-1', pk=9)) as adopt:
+            fake_sug.objects.filter.return_value = [sug]
+            text, action = chat_api.answer('tenant', self.items, '采纳第一条', actor=actor)
+        self.assertIsNone(action)  # 直接执行，不再返回待确认动作
+        self.assertIn('PO-1', text)
+        adopt.assert_called_once()
 
     def test_toolbox_write_tools_whitelisted(self):
         for name, (_fn, is_write) in tools.TOOLBOX.items():
@@ -134,6 +139,7 @@ class AssistantReplyTests(SimpleTestCase):
         request.tenant = object()
         request.session = {}
         with patch('ai_assist.views.restock_suggestions', return_value=(None, self.items)), \
+             patch('ai_assist.views.chat_api.configured', return_value=False), \
              patch('ai_assist.views.chat_api.answer') as model:
             response = views.assistant_chat(request)
         self.assertEqual(response.status_code, 200)
@@ -142,62 +148,66 @@ class AssistantReplyTests(SimpleTestCase):
         model.assert_not_called()
 
 
-class CreateProductToolTests(SimpleTestCase):
-    def test_create_product_tool_validates_without_db(self):
-        result = tools.execute('create_product', {'name': '', 'price': 1, 'cost': 2}, 'tenant')
-        self.assertIn('error', result)
-        result = tools.execute('create_product', {'name': 'X', 'price': 'abc', 'cost': 2}, 'tenant')
-        self.assertIn('error', result)
-        result = tools.execute('create_product', {'name': 'X', 'price': -1, 'cost': 2}, 'tenant')
-        self.assertIn('error', result)
+class DirectWriteToolTests(TestCase):
+    """直接操作模式：写工具凭老板权限直接落库，非老板被拒。"""
 
-
-class CreateProductConfirmFlowTests(TestCase):
     def setUp(self):
         from django.contrib.auth import get_user_model
         from tenancy.models import Membership, Role, Tenant
         self.tenant = Tenant.objects.create(name='测试企业', code='test-ai-prod')
         self.boss = get_user_model().objects.create_user('boss1', password='x')
-        Membership.objects.create(user=self.boss, tenant=self.tenant, role=Role.BOSS)
+        self.boss_membership = Membership.objects.create(user=self.boss, tenant=self.tenant, role=Role.BOSS)
         self.sales = get_user_model().objects.create_user('sales1', password='x')
-        Membership.objects.create(user=self.sales, tenant=self.tenant, role=Role.SALES)
+        self.sales_membership = Membership.objects.create(user=self.sales, tenant=self.tenant, role=Role.SALES)
+        self.boss_actor = (self.boss, self.boss_membership)
+        self.sales_actor = (self.sales, self.sales_membership)
         self.spec = {'name': '酱香新品', 'price': '128.00', 'cost': '66.00',
                      'category': '酱香型', 'specification': '53度/500ml'}
 
-    def _request(self, user, state, message):
-        from tenancy.models import Membership, Role
-        request = RequestFactory().post('/ai/assistant/chat/', {'message': message})
-        request.user = user
-        request.tenant = self.tenant
-        request.membership = Membership.objects.get(user=user, tenant=self.tenant)
-        request.session = dict(state) if state else {}
-        return request
+    def test_create_product_validates(self):
+        result = tools.execute('create_product', {'name': '', 'price': 1, 'cost': 2}, self.tenant, actor=self.boss_actor)
+        self.assertIn('error', result)
+        result = tools.execute('create_product', {'name': 'X', 'price': 'abc', 'cost': 2}, self.tenant, actor=self.boss_actor)
+        self.assertIn('error', result)
+        result = tools.execute('create_product', {'name': 'X', 'price': -1, 'cost': 2}, self.tenant, actor=self.boss_actor)
+        self.assertIn('error', result)
 
-    def test_confirm_creates_product(self):
+    def test_create_product_direct_executes(self):
         from inventory.models import Product
-        request = self._request(self.boss, {'pending_create_product': self.spec}, '好')
-        request.session['assistant_state'] = {'pending_create_product': self.spec}
-        with patch('ai_assist.views.restock_suggestions', return_value=(None, [])):
-            response = views.assistant_chat(request)
-        self.assertEqual(response.status_code, 200)
+        result = tools.execute('create_product', dict(self.spec), self.tenant, actor=self.boss_actor)
+        self.assertIn('已录入', result)
         p = Product.objects.get(tenant=self.tenant, name='酱香新品')
         self.assertEqual(p.category.name, '酱香型')
         self.assertTrue(p.barcode)
-        self.assertNotIn('pending_create_product', request.session.get('assistant_state', {}))
+        # 同名再录被拒
+        dup = tools.execute('create_product', dict(self.spec), self.tenant, actor=self.boss_actor)
+        self.assertIn('error', dup)
 
-    def test_cancel_does_not_create(self):
+    def test_create_product_requires_boss(self):
         from inventory.models import Product
-        request = self._request(self.boss, {'pending_create_product': self.spec}, '算了')
-        request.session['assistant_state'] = {'pending_create_product': self.spec}
-        with patch('ai_assist.views.restock_suggestions', return_value=(None, [])):
-            views.assistant_chat(request)
+        result = tools.execute('create_product', dict(self.spec), self.tenant, actor=self.sales_actor)
+        self.assertIn('error', result)
+        self.assertIn('老板', result['error'])
         self.assertFalse(Product.objects.filter(tenant=self.tenant, name='酱香新品').exists())
 
-    def test_non_boss_denied(self):
-        from inventory.models import Product
-        request = self._request(self.sales, {'pending_create_product': self.spec}, '好')
-        request.session['assistant_state'] = {'pending_create_product': self.spec}
-        with patch('ai_assist.views.restock_suggestions', return_value=(None, [])):
-            response = views.assistant_chat(request)
-        self.assertIn('老板', json.loads(response.content)['reply'])
-        self.assertFalse(Product.objects.filter(tenant=self.tenant, name='酱香新品').exists())
+    def test_adopt_direct_executes(self):
+        from ai_assist.models import DecisionRun, DraftTask, Suggestion
+        run = DecisionRun.objects.create(tenant=self.tenant, workflow='replenish', update_cycle='day')
+        sug = Suggestion.objects.create(tenant=self.tenant, run=run, workflow='replenish',
+                                        title='补货：酱香新品', target_label='酱香新品',
+                                        required_role='boss', draft_kind='purchase_draft')
+        result = tools.execute('adopt_suggestions', {'ids': [sug.pk]}, self.tenant, actor=self.boss_actor)
+        self.assertEqual(result['已生成草稿'], 1)
+        sug.refresh_from_db()
+        self.assertEqual(sug.status, 'adopted')
+        self.assertTrue(DraftTask.objects.filter(suggestion=sug).exists())
+
+    def test_adopt_requires_boss(self):
+        from ai_assist.models import DecisionRun, Suggestion
+        run = DecisionRun.objects.create(tenant=self.tenant, workflow='replenish', update_cycle='day')
+        sug = Suggestion.objects.create(tenant=self.tenant, run=run, workflow='replenish',
+                                        title='补货：酱香新品', required_role='boss')
+        result = tools.execute('adopt_suggestions', {'ids': [sug.pk]}, self.tenant, actor=self.sales_actor)
+        self.assertIn('error', result)
+        sug.refresh_from_db()
+        self.assertEqual(sug.status, 'pending')

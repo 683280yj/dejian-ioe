@@ -88,19 +88,40 @@ def _tool_query_pending_drafts(tenant, args):
         for t in rows]}
 
 
-def _tool_adopt_suggestions(tenant, args):
-    """写操作：不执行，返回待确认动作（前端走既有采纳入口，带权限与 CSRF）。"""
+def _is_boss(actor):
+    """直接执行写操作的门槛：企业老板或超管。"""
+    from . import services
+    from tenancy.models import Role
+    if not actor:
+        return False
+    user, membership = actor
+    return services.user_can(user, membership, Role.BOSS)
+
+
+def _tool_adopt_suggestions(tenant, args, actor=None):
+    """写操作（直接执行）：为补货建议生成采购草稿，逐条走既有 adopt 服务（含角色校验）。"""
+    from . import services
+    if not _is_boss(actor):
+        return {'error': '生成采购草稿需要「老板」权限，请让老板操作或在页面上采纳'}
     pks = [int(pk) for pk in (args.get('ids') or [])]
-    valid = set(Suggestion.objects.filter(tenant=tenant, workflow='replenish',
-                                          status='pending', pk__in=pks)
-                .values_list('pk', flat=True))
-    return {'__action__': {'adopt_pks': sorted(valid)},
-            '确认生成': len(valid), '无效编号': [pk for pk in pks if pk not in valid]}
+    rows = Suggestion.objects.filter(tenant=tenant, workflow='replenish', status='pending', pk__in=pks)
+    user, membership = actor
+    done, failed = [], []
+    for sug in rows:
+        try:
+            task = services.adopt(sug, user, membership)
+            done.append({'编号': sug.pk, '对象': sug.target_label or sug.title, '草稿单号': task.external_ref or task.pk})
+        except Exception as exc:
+            msg = getattr(exc, 'messages', [str(exc)])[0] if hasattr(exc, 'messages') else str(exc)
+            failed.append({'编号': sug.pk, '原因': msg})
+    return {'已生成草稿': len(done), '明细': done, '失败': failed}
 
 
-def _tool_create_product(tenant, args):
-    """写操作：只做校验并返回待确认动作，不写库；用户确认后由视图调 create_product 落库。"""
+def _tool_create_product(tenant, args, actor=None):
+    """写操作（直接执行）：录入新商品，仅老板/超管。条码缺省自动生成，分类缺省「未分类」。"""
     from decimal import InvalidOperation
+    if not _is_boss(actor):
+        return {'error': '录入商品需要「老板」权限，请让老板操作或到商品管理页录入'}
     name = (args.get('name') or '').strip()
     if not name:
         return {'error': '缺少商品名称'}
@@ -114,15 +135,15 @@ def _tool_create_product(tenant, args):
     Product = apps.get_model('inventory', 'Product')
     if Product.objects.filter(tenant=tenant, name=name, is_active=True).exists():
         return {'error': f'已存在同名启用商品「{name}」，如需更新请走商品管理页'}
-    return {'__action__': {'create_product': {
+    p = create_product(tenant, {
         'name': name, 'price': str(price), 'cost': str(cost),
         'category': (args.get('category') or '').strip() or '未分类',
         'specification': (args.get('specification') or '').strip(),
         'barcode': (args.get('barcode') or '').strip(),
         'case_size': int(args.get('case_size') or 1),
-    }},
-        '待录入': name, '售价': str(price), '成本价': str(cost),
-        '说明': '已收到录入请求，等用户在对话里确认后执行。请告诉用户回「好」确认。'}
+    })
+    return {'已录入': p.name, '分类': p.category.name, '售价': str(p.price),
+            '成本价': str(p.cost), '条码': p.barcode}
 
 
 def create_product(tenant, spec):
@@ -176,16 +197,16 @@ TOOL_SPECS = [
         'parameters': {'type': 'object', 'properties': {}, 'required': []}}},
     {'type': 'function', 'function': {
         'name': 'adopt_suggestions',
-        'description': '为指定的补货建议生成采购草稿。仅当用户在对话中明确说「生成草稿」「确认」等之后才可调用；'
-                       '调用后会先向用户展示清单，用户再次确认才真正执行',
+        'description': '为指定的补货建议生成采购草稿（直接执行，需老板权限）。用户明确说「生成草稿」「下单」等后即可调用，'
+                       '执行成功会返回草稿单号',
         'parameters': {'type': 'object', 'properties': {
             'ids': {'type': 'array', 'items': {'type': 'integer'},
                     'description': '补货建议编号列表（来自 query_restock_suggestions 的编号字段）'}},
             'required': ['ids']}}},
     {'type': 'function', 'function': {
         'name': 'create_product',
-        'description': '录入新商品。仅当用户在对话中明确要求录入/新增商品并给出名称、售价、成本价后才可调用；'
-                       '调用后先向用户展示录入清单，用户再次确认才真正创建。条码留空则自动生成，分类留空归入「未分类」',
+        'description': '录入新商品（直接执行，需老板权限）。用户明确要求录入/新增商品并给出名称、售价、成本价后即可调用；'
+                       '条码留空自动生成，分类留空归入「未分类」，成功返回自动生成的条码',
         'parameters': {'type': 'object', 'properties': {
             'name': {'type': 'string', 'description': '商品名称（必填）'},
             'price': {'type': 'number', 'description': '售价（必填）'},
@@ -198,14 +219,14 @@ TOOL_SPECS = [
 ]
 
 
-def execute(name, args, tenant):
-    """执行工具；未知工具返回错误。返回 dict（写操作返回带 __action__ 的确认信息）。"""
+def execute(name, args, tenant, actor=None):
+    """执行工具；未知工具返回错误。只读工具直接执行；写操作凭老板权限直接落库。"""
     entry = TOOLBOX.get(name)
     if entry is None:
         return {'error': f'未知工具 {name}'}
     fn, _is_write = entry
     try:
-        return fn(tenant, args or {})
+        return fn(tenant, args or {}, actor=actor)
     except Exception as exc:  # 工具失败不拖垮对话，回喂错误让模型换个说法
         return {'error': f'{type(exc).__name__}: {exc}'}
 
