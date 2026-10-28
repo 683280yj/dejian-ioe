@@ -67,8 +67,8 @@ def _tool_query_sales_summary(tenant, args):
     start = timezone.localdate() - dt.timedelta(days=days - 1)
     qs = SaleItem.objects.filter(sale__tenant=tenant, sale__status='COMPLETED',
                                  sale__created_at__date__gte=start)
-    total = qs.aggregate(q=Sum('quantity'), amt=Sum('line_amount'))
-    top = list(qs.values('product__name').annotate(q=Sum('quantity'), amt=Sum('line_amount'))
+    total = qs.aggregate(q=Sum('quantity'), amt=Sum('subtotal'))
+    top = list(qs.values('product__name').annotate(q=Sum('quantity'), amt=Sum('subtotal'))
                .order_by('-amt')[:5])
     return {
         '统计天数': days,
@@ -224,9 +224,11 @@ def execute(name, args, tenant, actor=None):
     entry = TOOLBOX.get(name)
     if entry is None:
         return {'error': f'未知工具 {name}'}
-    fn, _is_write = entry
+    fn, is_write = entry
     try:
-        return fn(tenant, args or {}, actor=actor)
+        # 只读工具不收 actor；写工具才需要操作者身份
+        kwargs = {'actor': actor} if is_write else {}
+        return fn(tenant, args or {}, **kwargs)
     except Exception as exc:  # 工具失败不拖垮对话，回喂错误让模型换个说法
         return {'error': f'{type(exc).__name__}: {exc}'}
 

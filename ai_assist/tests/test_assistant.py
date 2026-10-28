@@ -211,3 +211,10 @@ class DirectWriteToolTests(TestCase):
         self.assertIn('error', result)
         sug.refresh_from_db()
         self.assertEqual(sug.status, 'pending')
+
+    def test_read_tools_accept_actor_kwarg(self):
+        """回归：execute 统一透传 actor 不得破坏只读工具（生产曾因此全量查询报错）。"""
+        for name, args in [('query_restock_suggestions', {}), ('query_stock', {'keyword': '酱'}),
+                           ('query_sales_summary', {'days': 7}), ('query_pending_drafts', {})]:
+            result = tools.execute(name, args, self.tenant, actor=self.boss_actor)
+            self.assertNotIn('error', result, f'{name} 失败: {result}')
