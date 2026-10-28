@@ -1,0 +1,402 @@
+/* 筹策官网 · 数字山水主题（配套 App.tsx） */
+
+:root {
+  --ink: #0b1214;
+  --ink-soft: #1a2427;
+  --paper: #fffdf7;
+  --paper-warm: #faf5ea;
+  --red: #87353b;
+  --red-deep: #6f2a30;
+  --gold: #e0a55a;
+  --gold-soft: #e8cdb2;
+  --cream: #f5eedf;
+  --text: #33231b;
+  --text-muted: #6b5a4e;
+  --radius: 16px;
+  --shadow: 0 24px 60px rgba(42, 21, 18, .35);
+  --font: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-serif: "Noto Serif SC", "Songti SC", serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--paper);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; display: block; }
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; }
+
+.skip-link {
+  position: absolute; left: -9999px; z-index: 2000;
+  background: var(--red); color: var(--cream); padding: 8px 16px; border-radius: 0 0 8px 0;
+}
+.skip-link:focus { left: 0; }
+
+/* ── 顶部导航 ─────────────────────────── */
+.site-header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(11, 18, 20, .92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(224, 165, 90, .18);
+}
+.nav-shell {
+  max-width: 1180px; margin: 0 auto; padding: 14px 24px;
+  display: flex; align-items: center; gap: 28px;
+}
+.brand { display: flex; align-items: center; gap: 10px; color: var(--cream); }
+.brand img { width: 30px; height: 30px; }
+.brand span { font-family: var(--font-serif); font-size: 21px; letter-spacing: 4px; }
+.nav-links { display: flex; gap: 26px; align-items: center; }
+.nav-links a {
+  color: rgba(245, 238, 223, .82); font-size: 14.5px; display: inline-flex; align-items: center; gap: 4px;
+  transition: color .2s;
+}
+.nav-links a:hover { color: var(--gold); }
+.nav-links svg { width: 13px; height: 13px; opacity: .7; }
+.nav-actions { margin-left: auto; display: flex; gap: 12px; align-items: center; }
+.login-button { color: var(--gold-soft); font-size: 14px; padding: 8px 12px; transition: color .2s; }
+.login-button:hover { color: var(--gold); }
+.menu-button {
+  display: none; margin-left: auto; background: none; border: 1px solid rgba(224, 165, 90, .4);
+  color: var(--cream); border-radius: 10px; padding: 8px; cursor: pointer;
+}
+
+/* ── 按钮 ─────────────────────────────── */
+.primary-button {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: linear-gradient(180deg, #9c3f46, var(--red-deep));
+  color: var(--cream); border: 0; border-radius: 999px;
+  padding: 12px 26px; font-size: 15px; cursor: pointer;
+  box-shadow: 0 10px 26px rgba(111, 42, 48, .35);
+  transition: transform .2s, box-shadow .2s;
+}
+.primary-button:hover { transform: translateY(-1px); box-shadow: 0 14px 32px rgba(111, 42, 48, .45); }
+.primary-button svg { width: 16px; height: 16px; }
+.primary-button.compact { padding: 9px 20px; font-size: 14px; }
+.primary-button:disabled { opacity: .6; cursor: wait; transform: none; }
+.outline-button {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(245, 238, 223, .08); color: var(--cream);
+  border: 1px solid rgba(224, 165, 90, .55); border-radius: 999px;
+  padding: 12px 26px; font-size: 15px; cursor: pointer; transition: background .2s;
+}
+.outline-button:hover { background: rgba(224, 165, 90, .14); }
+.outline-button svg { width: 16px; height: 16px; }
+.ink-link {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: none; border: 0; color: var(--red);
+  font-size: 16px; font-weight: 600; cursor: pointer; padding: 0;
+  border-bottom: 2px solid rgba(135, 53, 59, .35); padding-bottom: 3px; transition: border-color .2s;
+}
+.ink-link:hover { border-color: var(--red); }
+.ink-link svg { width: 16px; height: 16px; }
+
+/* ── Hero ─────────────────────────────── */
+.hero {
+  position: relative; overflow: hidden;
+  background: radial-gradient(1200px 600px at 78% -10%, #16262a, var(--ink) 62%);
+  color: var(--cream);
+}
+.hero-photo {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(900px 420px at 15% 110%, rgba(135, 53, 59, .32), transparent 60%),
+    radial-gradient(700px 380px at 85% 100%, rgba(224, 165, 90, .12), transparent 65%);
+}
+.hero-grid {
+  position: relative; z-index: 2;
+  max-width: 1180px; margin: 0 auto; padding: 96px 24px 140px;
+  display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 48px; align-items: center;
+}
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  color: var(--gold-soft); font-size: 13.5px; letter-spacing: 2px;
+}
+.eyebrow i { width: 26px; height: 1px; background: var(--gold); display: inline-block; }
+.hero h1 {
+  font-family: var(--font-serif); font-weight: 600;
+  font-size: clamp(34px, 4.6vw, 54px); line-height: 1.28; margin: 18px 0 20px;
+}
+.hero h1 em { font-style: normal; color: var(--gold); }
+.hero-lead { color: rgba(245, 238, 223, .78); font-size: 17px; max-width: 30em; }
+.hero-actions { display: flex; gap: 14px; margin-top: 34px; flex-wrap: wrap; }
+.hero-proof {
+  margin-top: 26px; display: inline-flex; align-items: center; gap: 9px;
+  color: var(--gold-soft); font-size: 13.5px;
+}
+.hero-proof span {
+  display: inline-flex; width: 20px; height: 20px; border-radius: 50%;
+  background: rgba(143, 209, 138, .18); color: #8fd18a;
+  align-items: center; justify-content: center;
+}
+.hero-proof svg { width: 12px; height: 12px; }
+.hero-fade-up { animation: heroFadeUp .8s both; }
+@keyframes heroFadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+
+.cloud-transition {
+  position: absolute; bottom: -1px; left: 0; right: 0; height: 90px; z-index: 3;
+  background: var(--paper);
+  clip-path: ellipse(75% 100% at 50% 100%);
+}
+
+/* ── 数字山水 ─────────────────────────── */
+.digital-landscape { position: absolute; inset: 0; pointer-events: none; }
+.lattice {
+  position: absolute; top: 0; bottom: 0; width: 1px;
+  background: linear-gradient(180deg, transparent, rgba(224, 165, 90, .25), transparent);
+}
+.lattice-left { left: 18%; }
+.lattice-right { right: 18%; }
+.contour-lines { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 70%; }
+.contour-lines path { fill: none; stroke: rgba(224, 165, 90, .22); stroke-width: 1.2; }
+.data-rain {
+  position: absolute; top: 0; bottom: 0; width: 140px; opacity: .5;
+  background-image: repeating-linear-gradient(180deg, rgba(224,165,90,.14) 0 2px, transparent 2px 42px);
+  animation: rain 9s linear infinite;
+}
+.data-rain-one { right: 24%; }
+.data-rain-two { left: 30%; animation-duration: 13s; }
+@keyframes rain { from { background-position-y: 0; } to { background-position-y: 420px; } }
+.seal-mark {
+  position: absolute; right: 6%; top: 16%;
+  display: flex; gap: 6px; padding: 10px 12px;
+  border: 1.5px solid rgba(156, 63, 70, .8); border-radius: 8px;
+  background: rgba(156, 63, 70, .12);
+}
+.seal-mark span {
+  font-family: var(--font-serif); font-size: 22px; color: #d98a8f;
+  writing-mode: vertical-rl; letter-spacing: 6px;
+}
+
+/* ── 产品舞台 ─────────────────────────── */
+.product-stage { position: relative; z-index: 2; }
+.product-window {
+  background: var(--paper); border-radius: var(--radius); overflow: hidden;
+  border: 1px solid rgba(224, 165, 90, .35); box-shadow: var(--shadow);
+  color: var(--text);
+}
+.window-bar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 16px; background: var(--ink-soft); color: var(--gold-soft); font-size: 13px;
+}
+.window-dots { display: inline-flex; gap: 6px; }
+.window-dots i { width: 10px; height: 10px; border-radius: 50%; background: rgba(224, 165, 90, .4); }
+.window-dots i:first-child { background: #9c3f46; }
+.status-pill {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: #8fd18a;
+}
+.status-pill i { width: 7px; height: 7px; border-radius: 50%; background: #8fd18a; }
+.product-body { display: grid; grid-template-columns: 168px 1fr; min-height: 300px; }
+.product-nav {
+  background: var(--paper-warm); border-right: 1px solid rgba(135, 53, 59, .12);
+  padding: 18px 16px; display: flex; flex-direction: column; gap: 12px;
+  font-size: 13.5px; color: var(--text-muted);
+}
+.product-nav img { width: 26px; margin-bottom: 8px; }
+.product-nav .active { color: var(--red); font-weight: 600; }
+.product-canvas { padding: 18px; }
+.canvas-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.canvas-head strong { font-size: 16px; }
+.canvas-head span { font-size: 12.5px; color: var(--text-muted); }
+.metric-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.metric-row > div {
+  background: var(--paper-warm); border: 1px solid rgba(135, 53, 59, .1);
+  border-radius: 10px; padding: 10px 12px; display: flex; align-items: baseline; gap: 8px;
+}
+.metric-row small { font-size: 12px; color: var(--text-muted); }
+.metric-row b { font-size: 22px; color: var(--red-deep); }
+.metric-row em { font-style: normal; font-size: 11.5px; color: var(--text-muted); margin-left: auto; }
+.product-canvas > img { border-radius: 10px; border: 1px solid rgba(135, 53, 59, .1); }
+.mobile-panel {
+  position: absolute; right: -14px; bottom: -30px;
+  width: 190px; background: var(--ink-soft); color: var(--cream);
+  border: 1px solid rgba(224, 165, 90, .4); border-radius: 14px;
+  padding: 14px; display: flex; flex-direction: column; gap: 8px; font-size: 12.5px;
+  box-shadow: var(--shadow);
+}
+.mobile-panel > div { display: flex; align-items: center; gap: 8px; }
+.mobile-panel img { width: 18px; }
+.mobile-panel strong { font-size: 13.5px; }
+.mobile-panel span { display: inline-flex; align-items: center; gap: 6px; color: var(--gold-soft); }
+.mobile-panel svg { width: 12px; height: 12px; margin-left: auto; }
+.mobile-panel small { color: rgba(245, 238, 223, .6); display: flex; justify-content: space-between; }
+
+/* ── 纸面段落 ─────────────────────────── */
+.paper-section { background: var(--paper); position: relative; }
+.section-inner { max-width: 1180px; margin: 0 auto; padding: 88px 24px; }
+.section-index { color: var(--gold); font-size: 13px; letter-spacing: 3px; margin-bottom: 10px; }
+.section-heading h2, .case-heading h2, .delivery-copy h2, .about h2 {
+  font-family: var(--font-serif); font-weight: 600;
+  font-size: clamp(26px, 3.2vw, 38px); line-height: 1.35; margin-bottom: 14px;
+}
+.section-heading > p:last-child, .case-heading > p { color: var(--text-muted); max-width: 34em; }
+
+/* 滚动浮现 */
+.reveal, .reveal-scale { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s ease; }
+.reveal-scale { transform: scale(.96); }
+.reveal.revealed, .reveal-scale.revealed { opacity: 1; transform: none; }
+
+/* ── 产品能力 ─────────────────────────── */
+.service-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 40px; }
+.service-item {
+  display: flex; align-items: flex-start; gap: 14px;
+  background: var(--paper-warm); border: 1px solid rgba(135, 53, 59, .14);
+  border-radius: var(--radius); padding: 22px; transition: transform .25s, box-shadow .25s;
+}
+.service-item:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(42, 21, 18, .12); }
+.service-icon {
+  flex: none; width: 44px; height: 44px; border-radius: 12px;
+  background: linear-gradient(180deg, #9c3f46, var(--red-deep)); color: var(--cream);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.service-icon svg { width: 20px; height: 20px; }
+.service-item b { display: block; font-size: 16.5px; margin-bottom: 4px; }
+.service-item small { color: var(--text-muted); font-size: 13.5px; line-height: 1.65; }
+.service-arrow { margin-left: auto; align-self: center; width: 16px; height: 16px; color: var(--gold); flex: none; }
+
+/* ── 交付方式 ─────────────────────────── */
+.delivery { overflow: hidden; }
+.delivery-pattern {
+  position: absolute; inset: 0; opacity: .5; pointer-events: none;
+  background-image: radial-gradient(rgba(135, 53, 59, .1) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+.delivery-grid { position: relative; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 56px; align-items: center; }
+.delivery-copy p { color: var(--text-muted); margin-bottom: 22px; }
+.delivery-steps { display: flex; flex-direction: column; gap: 16px; }
+.delivery-steps article {
+  display: flex; gap: 18px; align-items: flex-start;
+  background: var(--paper-warm); border: 1px solid rgba(135, 53, 59, .14);
+  border-radius: var(--radius); padding: 20px 24px;
+}
+.delivery-steps span {
+  font-family: var(--font-serif); font-size: 22px; color: var(--red);
+  border-right: 1px solid rgba(135, 53, 59, .2); padding-right: 16px;
+}
+.delivery-steps strong { font-size: 16px; display: block; margin-bottom: 3px; }
+.delivery-steps p { color: var(--text-muted); font-size: 13.5px; }
+
+/* ── 案例 ─────────────────────────────── */
+.case { background: var(--paper-warm); }
+.case-heading { display: flex; flex-direction: column; gap: 10px; margin-bottom: 40px; }
+.case-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.case-card {
+  display: flex; flex-direction: column; gap: 12px;
+  background: var(--paper); border: 1px solid rgba(135, 53, 59, .14);
+  border-radius: var(--radius); overflow: hidden; transition: transform .25s, box-shadow .25s;
+}
+.case-card:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(42, 21, 18, .14); }
+.case-card img { aspect-ratio: 16/10; object-fit: cover; width: 100%; }
+.case-card > span { display: flex; flex-direction: column; padding: 0 18px; }
+.case-card b { font-size: 15.5px; }
+.case-card small { color: var(--text-muted); font-size: 13px; margin-bottom: 12px; }
+.case-card > svg { width: 16px; height: 16px; color: var(--gold); margin: 0 18px 16px auto; }
+
+/* ── 开始合作 ─────────────────────────── */
+.about {
+  background:
+    radial-gradient(800px 400px at 20% 0%, rgba(135, 53, 59, .25), transparent 60%),
+    radial-gradient(700px 380px at 90% 100%, rgba(224, 165, 90, .12), transparent 60%),
+    var(--ink);
+  color: var(--cream);
+}
+.about-inner { text-align: center; max-width: 720px; }
+.about-mark { display: inline-flex; margin-bottom: 18px; color: var(--gold); }
+.about-mark svg { width: 30px; height: 30px; }
+.about p { color: rgba(245, 238, 223, .75); margin: 14px 0 30px; }
+.about h2 em { font-style: normal; color: var(--gold); }
+
+/* ── 页脚 ─────────────────────────────── */
+footer { background: var(--ink-soft); color: var(--cream); }
+.footer-inner {
+  max-width: 1180px; margin: 0 auto; padding: 44px 24px;
+  display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+}
+.footer-inner p { color: rgba(245, 238, 223, .6); font-size: 13.5px; }
+.footer-inner > div { margin-left: auto; display: flex; gap: 16px; align-items: center; }
+.footer-inner a, .footer-inner button {
+  background: none; border: 0; color: var(--gold-soft); font-size: 14px; cursor: pointer;
+}
+.footer-inner a:hover, .footer-inner button:hover { color: var(--gold); }
+.footer-bottom {
+  border-top: 1px solid rgba(224, 165, 90, .15);
+  max-width: 1180px; margin: 0 auto; padding: 16px 24px;
+  display: flex; justify-content: space-between;
+  color: rgba(245, 238, 223, .45); font-size: 12.5px;
+}
+
+/* ── 预约弹窗 ─────────────────────────── */
+.dialog-backdrop {
+  position: fixed; inset: 0; z-index: 1200;
+  background: rgba(11, 18, 20, .6); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.booking-dialog {
+  width: min(460px, 100%); background: var(--paper);
+  border-radius: var(--radius); padding: 30px 30px 26px;
+  box-shadow: var(--shadow); position: relative;
+}
+.dialog-close {
+  position: absolute; right: 14px; top: 14px;
+  background: none; border: 0; cursor: pointer; color: var(--text-muted);
+  width: 32px; height: 32px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.dialog-close:hover { background: var(--paper-warm); color: var(--red); }
+.dialog-close svg { width: 18px; height: 18px; }
+.dialog-kicker { color: var(--gold); font-size: 12.5px; letter-spacing: 2.5px; }
+.booking-dialog h2 { font-family: var(--font-serif); font-size: 25px; margin: 8px 0 6px; }
+.booking-dialog > p { color: var(--text-muted); font-size: 14px; margin-bottom: 20px; }
+.booking-dialog form { display: flex; flex-direction: column; gap: 15px; }
+.booking-dialog label { display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; color: var(--text-muted); }
+.booking-dialog input[type="tel"],
+.booking-dialog input[type="text"] {
+  border: 1px solid rgba(135, 53, 59, .3); border-radius: 10px;
+  padding: 11px 14px; font-size: 15px; color: var(--text); background: #fff;
+}
+.booking-dialog input:focus { outline: 2px solid rgba(224, 165, 90, .6); outline-offset: 0; border-color: var(--gold); }
+.booking-dialog .consent { flex-direction: row; align-items: flex-start; gap: 8px; font-size: 12.5px; }
+.booking-dialog .consent input { margin-top: 3px; }
+.booking-dialog .honeypot { position: absolute; left: -9999px; }
+.dialog-submit { justify-content: center; width: 100%; margin-top: 4px; }
+.form-message {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 13.5px; border-radius: 10px; padding: 9px 13px;
+}
+.form-message svg { width: 15px; height: 15px; }
+.form-message.success { background: rgba(143, 209, 138, .14); color: #2f6b2c; }
+.form-message.error { background: rgba(156, 63, 70, .12); color: var(--red-deep); }
+
+/* ── 响应式 ───────────────────────────── */
+@media (max-width: 960px) {
+  .hero-grid, .delivery-grid { grid-template-columns: 1fr; gap: 40px; }
+  .product-stage { max-width: 560px; }
+  .service-grid, .case-grid { grid-template-columns: 1fr; }
+  .nav-links {
+    display: none; position: absolute; top: 100%; left: 0; right: 0;
+    background: var(--ink-soft); flex-direction: column; align-items: flex-start;
+    padding: 18px 24px; gap: 16px; border-bottom: 1px solid rgba(224, 165, 90, .2);
+  }
+  .nav-links.open { display: flex; }
+  .menu-button { display: inline-flex; }
+  .nav-actions { display: none; }
+  .hero-grid { padding: 64px 24px 110px; }
+  .mobile-panel { right: 4px; }
+}
+@media (max-width: 560px) {
+  .metric-row { grid-template-columns: 1fr; }
+  .product-body { grid-template-columns: 1fr; }
+  .product-nav { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid rgba(135, 53, 59, .12); }
+  .seal-mark { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .hero-fade-up, .data-rain { animation: none; }
+  .reveal, .reveal-scale { opacity: 1; transform: none; transition: none; }
+}
